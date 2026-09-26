@@ -8,6 +8,8 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatRadioModule } from '@angular/material/radio';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { AsrsRoutingModule } from './asrs-routing.module';
+import { LatinToPersianNumbersPipe } from './latin-to-persian-numbers.pipe';
+import { AsrsGaugeComponent } from './asrs-gauge.component';
 
 @NgModule({
     declarations: [AsrsComponent],
@@ -19,7 +21,9 @@ import { AsrsRoutingModule } from './asrs-routing.module';
         MatButtonModule,
         MatRadioModule,
         MatProgressBarModule,
-        AsrsRoutingModule
+        AsrsRoutingModule,
+        LatinToPersianNumbersPipe,
+        AsrsGaugeComponent
     ]
 })
 export class AsrsModule { }
