@@ -1,0 +1,16 @@
+@forward "@nebular/theme/styles/theming";
+@use "@nebular/theme/styles/theming" as *;
+@use "@nebular/theme/styles/themes/default" as default;
+
+$nb-themes: nb-register-theme(
+  (
+    font-family-primary: 'vazir',
+    font-family-secondary: 'vazir',
+  ),
+  default,
+  default
+);
+
+$nb-enable-css-custom-properties: true;
+
+

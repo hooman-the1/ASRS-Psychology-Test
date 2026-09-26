@@ -1,0 +1,102 @@
+/* Global styles */
+@use "themes" as *;
+@use "@nebular/theme/styles/globals" as *;
+@use "@nebular/auth/styles/globals" as *;
+@import "assets/awesome/css/all.css";
+@import "@angular/material/theming";
+
+@include nb-install() {
+  @include nb-theme-global();
+  @include nb-auth-global();
+}
+
+
+
+/* Angular Material typography */
+$custom-typography: mat-typography-config(
+  $font-family: "vazir",
+);
+@include mat-core($custom-typography);
+
+/* Font Awesome and custom font-face */
+@font-face {
+  font-family: vazir;
+  src: url(assets/fonts/Vazir.ttf);
+}
+@font-face {
+  font-family: vazir-thin;
+  src: url(assets/fonts/Vazir-Thin.ttf);
+}
+@font-face {
+  font-family: vazir-bold;
+  src: url(assets/fonts/Vazir-Bold.ttf);
+}
+@font-face {
+  font-family: iran;
+  src: url(assets/fonts/IRANSans.ttf);
+}
+@font-face {
+  font-family: iran-thin;
+  src: url(assets/fonts/IRANSans_Light.ttf);
+}
+
+@font-face {
+  font-family: "Material Symbols Outlined";
+  font-style: normal;
+  font-weight: 100 700;
+  font-display: block;
+  src: url("assets/fonts/material-symbols/material-symbols-outlined.woff2") format("woff2");
+}
+
+.material-symbols-outlined {
+  font-family: "Material Symbols Outlined";
+  font-weight: normal;
+  font-style: normal;
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+
+/* General styles */
+body {
+  margin: 0;
+  direction: rtl;
+  max-width: 99%;
+  font-family: "vazir", sans-serif; // fallback
+}
+
+.add-review {
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.no-window-header nb-card-header {
+  display: none !important;
+}
+
+nb-menu a nb-icon.menu-icon {
+  font-size: 1.5rem;
+  margin-left: 10px !important;
+}
+
+@font-face {
+  font-family: vazir;
+  src: url(assets/fonts/Vazir.ttf);
+}
+
+$nb-font-family-primary: "vazir";
+
+.privacy-notice-dialog-panel .mat-dialog-container {
+  border-radius: 24px;
+  overflow: hidden;
+}
+
+
