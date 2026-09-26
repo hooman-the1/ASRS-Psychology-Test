@@ -1,6 +1,6 @@
-# PHQ-9
+# ASRS
 
-This repository currently contains an empty Angular shell. The PHQ-9 questionnaire will be added in later tasks.
+This repository currently contains an empty Angular shell. The ASRS questionnaire will be added in later tasks.
 
 ## Setup and commands
 
