@@ -1,19 +1,24 @@
 import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AsrsComponent } from './asrs.component';
-import { ReactiveFormsModule, FormsModule } from '@angular/forms';
-import { ShareModule } from 'src/app/share/share.module';
-import { UiShareModule } from 'src/app/ui-share/ui-share.module';
+import { ReactiveFormsModule } from '@angular/forms';
+import { MatCardModule } from '@angular/material/card';
+import { MatDividerModule } from '@angular/material/divider';
+import { MatButtonModule } from '@angular/material/button';
+import { MatRadioModule } from '@angular/material/radio';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { AsrsRoutingModule } from './asrs-routing.module';
 
 @NgModule({
     declarations: [AsrsComponent],
     imports: [
         CommonModule,
-        FormsModule,
         ReactiveFormsModule,
-        ShareModule,
-        UiShareModule,
+        MatCardModule,
+        MatDividerModule,
+        MatButtonModule,
+        MatRadioModule,
+        MatProgressBarModule,
         AsrsRoutingModule
     ]
 })
