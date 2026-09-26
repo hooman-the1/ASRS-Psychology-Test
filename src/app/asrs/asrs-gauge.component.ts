@@ -23,7 +23,7 @@ interface PositionedMarker {
       [attr.aria-label]="marker?.label || ''">
       <path class="asrs-gauge-track" [attr.d]="archPath" fill="none" stroke="#e0e0e0"
         [attr.stroke-width]="thick" [attr.stroke-linecap]="cap" />
-      <path class="asrs-gauge-foreground" [attr.d]="archPath" fill="none"
+      <path *ngIf="progressPercent > 0" class="asrs-gauge-foreground" [attr.d]="archPath" fill="none"
         [attr.stroke]="foregroundColor" [attr.stroke-width]="thick"
         [attr.stroke-linecap]="cap" pathLength="100"
         [attr.stroke-dasharray]="progressPercent + ' 100'" />
@@ -90,11 +90,13 @@ export class AsrsGaugeComponent {
     const outwardY = -Math.sin(angle);
     const x = this.center + this.radius * outwardX;
     const y = this.center + this.radius * outwardY;
-    const tipX = x + marker.size * outwardX;
-    const tipY = y + marker.size * outwardY;
+    const baseX = x + this.thick / 2 * outwardX;
+    const baseY = y + this.thick / 2 * outwardY;
+    const tipX = baseX + marker.size * outwardX;
+    const tipY = baseY + marker.size * outwardY;
     const halfBase = marker.size * 0.6;
-    const baseA = `${x - halfBase * outwardY},${y + halfBase * outwardX}`;
-    const baseB = `${x + halfBase * outwardY},${y - halfBase * outwardX}`;
+    const baseA = `${baseX - halfBase * outwardY},${baseY + halfBase * outwardX}`;
+    const baseB = `${baseX + halfBase * outwardY},${baseY - halfBase * outwardX}`;
 
     return {
       points: `${tipX},${tipY} ${baseA} ${baseB}`,

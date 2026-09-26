@@ -58,9 +58,9 @@ describe('ASRS local display suppliers', () => {
 
     const fixture = TestBed.createComponent(AsrsDisplayFixture);
     for (const [score, color, expectedX, expectedY, expectedDash, expectedText] of [
-      [0, '#43a047', 10, 110, '0 100', '۰'],
-      [36, '#fb8c00', 110, 10, '50 100', '۳۶'],
-      [72, '#e53935', 210, 110, '100 100', '۷۲'],
+      [0, '#43a047', 2.5, 110, null, '۰'],
+      [36, '#fb8c00', 110, 2.5, '50 100', '۳۶'],
+      [72, '#e53935', 217.5, 110, '100 100', '۷۲'],
     ] as const) {
       fixture.componentInstance.setResult(score, color);
       fixture.detectChanges();
@@ -68,17 +68,21 @@ describe('ASRS local display suppliers', () => {
       const host = fixture.nativeElement as HTMLElement;
       const svg = host.querySelector('ngx-gauge svg') as SVGElement;
       const track = svg.querySelector('.asrs-gauge-track') as SVGPathElement;
-      const foreground = svg.querySelector('.asrs-gauge-foreground') as SVGPathElement;
+      const foreground = svg.querySelector('.asrs-gauge-foreground') as SVGPathElement | null;
       const marker = svg.querySelector('.asrs-gauge-marker') as SVGPolygonElement;
       const [tipX, tipY] = marker.getAttribute('points')!.split(' ')[0].split(',').map(Number);
 
       expect(svg.getAttribute('width')).toBe('220');
       expect(svg.getAttribute('viewBox')).toBe('0 0 220 130');
       expect(track.getAttribute('d')).toBe('M 20 110 A 90 90 0 0 1 200 110');
-      expect(foreground.getAttribute('stroke-width')).toBe('15');
-      expect(foreground.getAttribute('stroke-linecap')).toBe('round');
-      expect(foreground.getAttribute('stroke')).toBe(color);
-      expect(foreground.getAttribute('stroke-dasharray')).toBe(expectedDash);
+      if (score === 0) {
+        expect(foreground).toBeNull();
+      } else {
+        expect(foreground?.getAttribute('stroke-width')).toBe('15');
+        expect(foreground?.getAttribute('stroke-linecap')).toBe('round');
+        expect(foreground?.getAttribute('stroke')).toBe(color);
+        expect(foreground?.getAttribute('stroke-dasharray')).toBe(expectedDash);
+      }
       expect(marker.getAttribute('fill')).toBe(color);
       expect(marker.getAttribute('aria-label')).toBe('نمره شما');
       expect(tipX).toBeCloseTo(expectedX, 5);
