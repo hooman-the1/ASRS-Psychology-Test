@@ -1,0 +1,67 @@
+mat-card {
+  max-width: 600px;
+  margin: 30px auto;
+  padding: 20px;
+}
+
+mat-card-title p {
+  line-height: 22px;
+}
+
+mat-card-title.main-title {
+  line-height: 35px;
+}
+
+::ng-deep ngx-gauge .reading-block {
+  display: none !important;
+}
+
+.question {
+  font-size: 18px;
+  font-weight: 500;
+  margin-bottom: 16px;
+  line-height: 24px;
+}
+
+.options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.button-group {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 16px;
+}
+
+mat-progress-bar {
+  margin-top: 20px;
+}
+
+::ng-deep .snack-success {
+  background-color: #43a047;
+  color: #fff;
+}
+
+.result-card {
+  max-width: 600px;
+  margin: 30px auto;
+  padding: 20px;
+
+  p {
+    font-size: 16px;
+    margin: 8px 0;
+  }
+
+  .retake-button {
+    width: 100%;
+    margin-top: 20px;
+  }
+
+  ngx-gauge {
+    display: block;
+    margin: 0 auto;
+  }
+}
