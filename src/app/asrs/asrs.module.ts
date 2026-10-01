@@ -7,7 +7,6 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatButtonModule } from '@angular/material/button';
 import { MatRadioModule } from '@angular/material/radio';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { AsrsRoutingModule } from './asrs-routing.module';
 import { LatinToPersianNumbersPipe } from './latin-to-persian-numbers.pipe';
 import { AsrsGaugeComponent } from './asrs-gauge.component';
 
@@ -21,9 +20,9 @@ import { AsrsGaugeComponent } from './asrs-gauge.component';
         MatButtonModule,
         MatRadioModule,
         MatProgressBarModule,
-        AsrsRoutingModule,
         LatinToPersianNumbersPipe,
         AsrsGaugeComponent
-    ]
+    ],
+    exports: [AsrsComponent]
 })
 export class AsrsModule { }
