@@ -8,7 +8,7 @@ export const SEVERITY_LEVELS: Record<SeverityCategory, {
 }> = {
     minimal: {
         severity: 'حداقل نشانه‌های ADHD',
-        recommendation: 'وضعیت شما طبیعی به نظر می‌رسد، خوش به حالتون!.',
+        recommendation: 'وضعیت شما طبیعی به نظر می‌رسد، خوش به حالتون!',
         gaugeColor: '#43a047',
         emoji: '😊',
     },

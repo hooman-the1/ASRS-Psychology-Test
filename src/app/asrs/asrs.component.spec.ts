@@ -16,6 +16,11 @@ import { AsrsGaugeComponent } from './asrs-gauge.component';
 import { LatinToPersianNumbersPipe } from './latin-to-persian-numbers.pipe';
 
 describe('AsrsComponent local assessment flow', () => {
+  it('uses one clear sentence ending for the minimal recommendation', () => {
+    expect(SEVERITY_LEVELS.minimal.recommendation)
+      .toBe('وضعیت شما طبیعی به نظر می‌رسد، خوش به حالتون!');
+  });
+
   beforeEach(async () => {
     localStorage.removeItem(ASRS_HISTORY_STORAGE_KEY);
     await TestBed.configureTestingModule({
@@ -324,8 +329,8 @@ describe('AsrsComponent local assessment flow', () => {
   });
 
   [
-    { answers: Array(18).fill(0), score: 0, category: 'minimal', emoji: '😊', label: 'حداقل نشانه‌های ADHD', recommendation: 'وضعیت شما طبیعی به نظر می‌رسد، خوش به حالتون!.' },
-    { answers: Array(13).fill(0).concat(4, 4, 4, 4, 1), score: 17, category: 'minimal', emoji: '😊', label: 'حداقل نشانه‌های ADHD', recommendation: 'وضعیت شما طبیعی به نظر می‌رسد، خوش به حالتون!.' },
+    { answers: Array(18).fill(0), score: 0, category: 'minimal', emoji: '😊', label: 'حداقل نشانه‌های ADHD', recommendation: 'وضعیت شما طبیعی به نظر می‌رسد، خوش به حالتون!' },
+    { answers: Array(13).fill(0).concat(4, 4, 4, 4, 1), score: 17, category: 'minimal', emoji: '😊', label: 'حداقل نشانه‌های ADHD', recommendation: 'وضعیت شما طبیعی به نظر می‌رسد، خوش به حالتون!' },
     { answers: Array(14).fill(1).concat(4, 0, 0, 0), score: 18, category: 'mild', emoji: '🙂', label: 'علائم خفیف', recommendation: 'پیگیری علائم توصیه می‌شود. در صورت اختلال در عملکرد روزانه با روانشناس مشورت کنید.' },
     { answers: Array(9).fill(3).concat(Array(9).fill(0)), score: 27, category: 'mild', emoji: '🙂', label: 'علائم خفیف', recommendation: 'پیگیری علائم توصیه می‌شود. در صورت اختلال در عملکرد روزانه با روانشناس مشورت کنید.' },
     { answers: Array(7).fill(4).concat(Array(11).fill(0)), score: 28, category: 'moderate', emoji: '😐', label: 'علائم متوسط', recommendation: 'احتمال وجود ADHD هست. ارزیابی کامل‌تر توسط متخصص توصیه می‌شود.' },
@@ -333,7 +338,7 @@ describe('AsrsComponent local assessment flow', () => {
     { answers: Array(17).fill(2).concat(3), score: 37, category: 'severe', emoji: '😟', label: 'علائم شدید', recommendation: 'نیاز به ارزیابی فوری توسط روانشناس یا روانپزشک وجود دارد.' },
     { answers: Array(18).fill(4), score: 72, category: 'severe', emoji: '😟', label: 'علائم شدید', recommendation: 'نیاز به ارزیابی فوری توسط روانشناس یا روانپزشک وجود دارد.' },
   ].forEach(({ answers, score, category, emoji, label, recommendation }) => {
-    it(`shows the local total ${score} and copied ${category} guidance after submission`, () => {
+    it(`shows the local total ${score} and intended ${category} guidance after submission`, () => {
       const fixture = TestBed.createComponent(AsrsComponent);
       fixture.detectChanges();
       const component = fixture.componentInstance;

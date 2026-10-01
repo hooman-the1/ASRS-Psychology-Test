@@ -99,7 +99,7 @@ describe('ASRS saved history view', () => {
     first.totalScore = 65;
     first.severityCategory = 'severe';
     first.result.emoji = '🙂';
-    first.result.recommendationText = 'توصیه ذخیره‌شده اول';
+    first.result.recommendationText = 'وضعیت شما طبیعی به نظر می‌رسد، خوش به حالتون!.';
     first.result.gaugeColor = '#123abc';
     second.result.recommendationText = 'توصیه ذخیره‌شده دوم';
     const raw = JSON.stringify({ version: 1, records: [first, second] });
@@ -117,7 +117,7 @@ describe('ASRS saved history view', () => {
     const detail = root.querySelector('.history-detail') as HTMLElement;
     expect(detail).not.toBeNull();
     expect(detail.textContent).toContain('برچسب اول');
-    expect(detail.textContent).toContain('توصیه ذخیره‌شده اول');
+    expect(detail.textContent).toContain('وضعیت شما طبیعی به نظر می‌رسد، خوش به حالتون!.');
     expect(detail.textContent).toContain('🙂');
     expect(detail.textContent).toContain('۶۵');
     expect(detail.textContent).not.toContain('برچسب دوم');
