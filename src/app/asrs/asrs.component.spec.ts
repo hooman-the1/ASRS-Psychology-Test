@@ -198,16 +198,16 @@ describe('AsrsComponent local assessment flow', () => {
   });
 
   [
-    { answers: Array(18).fill(0), score: 0, category: 'minimal' },
-    { answers: Array(13).fill(0).concat(4, 4, 4, 4, 1), score: 17, category: 'minimal' },
-    { answers: Array(14).fill(1).concat(4, 0, 0, 0), score: 18, category: 'mild' },
-    { answers: Array(9).fill(3).concat(Array(9).fill(0)), score: 27, category: 'mild' },
-    { answers: Array(7).fill(4).concat(Array(11).fill(0)), score: 28, category: 'moderate' },
-    { answers: Array(18).fill(2), score: 36, category: 'moderate' },
-    { answers: Array(17).fill(2).concat(3), score: 37, category: 'severe' },
-    { answers: Array(18).fill(4), score: 72, category: 'severe' },
-  ].forEach(({ answers, score, category }) => {
-    it(`shows the local total ${score} and ${category} severity after submission`, () => {
+    { answers: Array(18).fill(0), score: 0, category: 'minimal', emoji: '😊', label: 'حداقل نشانه‌های ADHD', recommendation: 'وضعیت شما طبیعی به نظر می‌رسد، خوش به حالتون!.' },
+    { answers: Array(13).fill(0).concat(4, 4, 4, 4, 1), score: 17, category: 'minimal', emoji: '😊', label: 'حداقل نشانه‌های ADHD', recommendation: 'وضعیت شما طبیعی به نظر می‌رسد، خوش به حالتون!.' },
+    { answers: Array(14).fill(1).concat(4, 0, 0, 0), score: 18, category: 'mild', emoji: '🙂', label: 'علائم خفیف', recommendation: 'پیگیری علائم توصیه می‌شود. در صورت اختلال در عملکرد روزانه با روانشناس مشورت کنید.' },
+    { answers: Array(9).fill(3).concat(Array(9).fill(0)), score: 27, category: 'mild', emoji: '🙂', label: 'علائم خفیف', recommendation: 'پیگیری علائم توصیه می‌شود. در صورت اختلال در عملکرد روزانه با روانشناس مشورت کنید.' },
+    { answers: Array(7).fill(4).concat(Array(11).fill(0)), score: 28, category: 'moderate', emoji: '😐', label: 'علائم متوسط', recommendation: 'احتمال وجود ADHD هست. ارزیابی کامل‌تر توسط متخصص توصیه می‌شود.' },
+    { answers: Array(18).fill(2), score: 36, category: 'moderate', emoji: '😐', label: 'علائم متوسط', recommendation: 'احتمال وجود ADHD هست. ارزیابی کامل‌تر توسط متخصص توصیه می‌شود.' },
+    { answers: Array(17).fill(2).concat(3), score: 37, category: 'severe', emoji: '😟', label: 'علائم شدید', recommendation: 'نیاز به ارزیابی فوری توسط روانشناس یا روانپزشک وجود دارد.' },
+    { answers: Array(18).fill(4), score: 72, category: 'severe', emoji: '😟', label: 'علائم شدید', recommendation: 'نیاز به ارزیابی فوری توسط روانشناس یا روانپزشک وجود دارد.' },
+  ].forEach(({ answers, score, category, emoji, label, recommendation }) => {
+    it(`shows the local total ${score} and copied ${category} guidance after submission`, () => {
       const fixture = TestBed.createComponent(AsrsComponent);
       fixture.detectChanges();
       const component = fixture.componentInstance;
@@ -221,9 +221,20 @@ describe('AsrsComponent local assessment flow', () => {
       expect(component.severityText).toBe(SEVERITY_LEVELS[category as keyof typeof SEVERITY_LEVELS].severity);
       expect(result).not.toBeNull();
       expect(result.textContent).toContain(component.severityText);
-      expect(result.querySelectorAll('mat-card-content p')[0].textContent).toContain('مجموع امتیاز:');
-      expect(result.querySelectorAll('mat-card-content p')[0].textContent)
+      const paragraphs = result.querySelectorAll('mat-card-content p');
+      expect(paragraphs.length).toBe(4);
+      expect(paragraphs[0].textContent).toContain('مجموع امتیاز:');
+      expect(paragraphs[0].textContent)
         .toContain(new LatinToPersianNumbersPipe().transform(score) as string);
+      expect(paragraphs[1].querySelector('span')?.textContent?.trim().replace(/\s+/g, ' '))
+        .toBe(`${emoji} ${label}`);
+      expect(paragraphs[2].textContent?.trim()).toBe(`توصیه: ${recommendation}`);
+      for (const other of Object.values(SEVERITY_LEVELS)) {
+        if (other.severity !== label) {
+          expect(result.textContent).not.toContain(other.severity);
+          expect(result.textContent).not.toContain(other.recommendation);
+        }
+      }
     });
   });
 
@@ -251,6 +262,31 @@ describe('AsrsComponent local assessment flow', () => {
       expect(component.totalScore).withContext(`answer ${index + 1}`).toBe(1);
       control.setValue(0);
     });
+  });
+
+  it('hides prior guidance during a retake and replaces it with the new result', () => {
+    const fixture = TestBed.createComponent(AsrsComponent);
+    fixture.detectChanges();
+    const component = fixture.componentInstance;
+    const resultText = () => (fixture.nativeElement.querySelector('.result-card') as HTMLElement | null)?.textContent ?? '';
+
+    expect(fixture.nativeElement.textContent).not.toContain('توصیه:');
+    component.answers.controls.forEach(control => control.setValue(4));
+    component.submit();
+    fixture.detectChanges();
+    expect(resultText()).toContain(SEVERITY_LEVELS.severe.recommendation);
+
+    component.restart();
+    fixture.detectChanges();
+    expect(resultText()).toBe('');
+    expect(fixture.nativeElement.textContent).not.toContain('توصیه:');
+    expect(fixture.nativeElement.textContent).not.toContain(SEVERITY_LEVELS.severe.recommendation);
+
+    component.answers.controls.forEach(control => control.setValue(0));
+    component.submit();
+    fixture.detectChanges();
+    expect(resultText()).toContain(SEVERITY_LEVELS.minimal.recommendation);
+    expect(resultText()).not.toContain(SEVERITY_LEVELS.severe.recommendation);
   });
 
   it('restarts with a fresh form and leaves the existing session key untouched', () => {
