@@ -1,4 +1,23 @@
+@font-face {
+  font-family: 'Vazir';
+  src: url('/assets/fonts/Vazir.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
 html, body {
   margin: 0;
   min-height: 100%;
+  font-family: 'Vazir', sans-serif;
+}
+
+.mat-mdc-card,
+mat-card-title.mat-mdc-card-title,
+.mat-mdc-button,
+.mat-mdc-raised-button,
+button.mat-mdc-outlined-button,
+.mat-mdc-radio-button,
+mat-radio-button .mdc-label {
+  font-family: 'Vazir', sans-serif;
 }
