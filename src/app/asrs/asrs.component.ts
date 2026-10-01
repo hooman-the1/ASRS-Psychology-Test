@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, HostListener, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators, FormArray, FormControl } from '@angular/forms';
 
 import {
@@ -11,7 +11,7 @@ import {
 } from './asrs.helpers';
 
 import { SeverityCategory, questions } from './asrs.constants';
-import { AsrsHistoryRecordV1 } from './asrs-history';
+import { ASRS_HISTORY_STORAGE_KEY, AsrsHistoryRecordV1 } from './asrs-history';
 import { loadAsrsHistory, saveCompletedAsrsAssessment } from './asrs-history-storage';
 
 @Component({
@@ -31,6 +31,10 @@ export class AsrsComponent implements OnInit {
   showHistory = false;
   historyStatus: 'available' | 'unavailable' = 'available';
   historyRecords: AsrsHistoryRecordV1[] = [];
+  selectedHistoryId: string | null = null;
+  selectedHistoryRecord: AsrsHistoryRecordV1 | null = null;
+  detailStatus: 'available' | 'not-found' | 'unavailable' = 'not-found';
+  readonly answerLabels = ['هرگز', 'به ندرت', 'گاهی اوقات', 'اغلب', 'تقریباً همیشه'];
   private readonly historyDateFormatter = new Intl.DateTimeFormat('fa-IR', {
     dateStyle: 'medium', timeStyle: 'short',
   });
@@ -63,6 +67,8 @@ export class AsrsComponent implements OnInit {
   }
 
   openHistory(): void {
+    this.selectedHistoryId = null;
+    this.selectedHistoryRecord = null;
     const loaded = loadAsrsHistory();
     this.historyStatus = loaded.status;
     this.historyRecords = loaded.status === 'available'
@@ -75,6 +81,33 @@ export class AsrsComponent implements OnInit {
 
   closeHistory(): void {
     this.showHistory = false;
+    this.selectedHistoryId = null;
+    this.selectedHistoryRecord = null;
+  }
+
+  openHistoryRecord(id: string): void {
+    this.selectedHistoryId = id;
+    const loaded = loadAsrsHistory();
+    this.selectedHistoryRecord = loaded.status === 'available'
+      ? loaded.history.records.find(record => record.id === id) ?? null
+      : null;
+    this.detailStatus = loaded.status === 'unavailable' ? 'unavailable'
+      : this.selectedHistoryRecord ? 'available' : 'not-found';
+  }
+
+  @HostListener('window:storage', ['$event'])
+  onHistoryStorageChanged(event: StorageEvent): void {
+    if (event.key === ASRS_HISTORY_STORAGE_KEY && this.showHistory && this.selectedHistoryId !== null) {
+      this.openHistoryRecord(this.selectedHistoryId);
+    }
+  }
+
+  closeHistoryRecord(): void {
+    this.openHistory();
+  }
+
+  getSavedGaugeMarkers(record: AsrsHistoryRecordV1): ReturnType<typeof getGaugeMarkers> {
+    return getGaugeMarkers(record.totalScore, record.result.gaugeColor);
   }
 
   formatHistoryDate(submittedAt: string): string {

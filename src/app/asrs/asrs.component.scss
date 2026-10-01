@@ -43,6 +43,35 @@ mat-card-title.main-title {
     margin: 20px 0;
     line-height: 1.8;
   }
+
+  .history-detail-not-found,
+  .history-detail-unavailable {
+    margin: 20px 0;
+    line-height: 1.8;
+  }
+
+  .history-answer-list {
+    padding-inline-start: 24px;
+    line-height: 1.8;
+  }
+
+  .history-answer-item {
+    padding: 12px 0;
+    border-bottom: 1px solid #ddd;
+
+    strong {
+      display: block;
+    }
+  }
+
+  .history-gauge {
+    margin: 30px 0;
+    text-align: center;
+
+    p {
+      font-size: 18px;
+    }
+  }
 }
 
 ::ng-deep ngx-gauge .reading-block {

@@ -10,7 +10,7 @@
     </button>
   </mat-card-actions>
 
-  <mat-card *ngIf="showHistory" class="history-card" dir="rtl">
+  <mat-card *ngIf="showHistory && selectedHistoryId === null" class="history-card" dir="rtl">
     <mat-card-title>تاریخچه ارزیابی‌ها</mat-card-title>
     <mat-divider></mat-divider>
     <mat-card-content>
@@ -25,12 +25,55 @@
           <time [attr.datetime]="record.submittedAt">{{ formatHistoryDate(record.submittedAt) }}</time>
           <span>امتیاز: {{ record.totalScore | latinToPersianNumbers }}</span>
           <span>نتیجه: {{ record.result.severityText }}</span>
+          <button mat-stroked-button type="button" (click)="openHistoryRecord(record.id)">
+            مشاهده جزئیات
+          </button>
         </li>
       </ol>
     </mat-card-content>
     <mat-card-actions>
       <button mat-stroked-button type="button" class="back-from-history-button" (click)="closeHistory()">
         بازگشت به ارزیابی
+      </button>
+    </mat-card-actions>
+  </mat-card>
+
+  <mat-card *ngIf="showHistory && selectedHistoryId !== null" class="history-card history-detail" dir="rtl">
+    <mat-card-title>جزئیات ارزیابی ذخیره‌شده</mat-card-title>
+    <mat-divider></mat-divider>
+    <mat-card-content>
+      <p *ngIf="detailStatus === 'not-found'" class="history-detail-not-found" role="status">
+        این ارزیابی در تاریخچه پیدا نشد.
+      </p>
+      <p *ngIf="detailStatus === 'unavailable'" class="history-detail-unavailable" role="status">
+        تاریخچه ارزیابی‌ها در دسترس نیست. لطفاً بعداً دوباره تلاش کنید.
+      </p>
+      <ng-container *ngIf="detailStatus === 'available' && selectedHistoryRecord as record">
+        <p><strong>زمان ثبت:</strong> <time [attr.datetime]="record.submittedAt">{{ formatHistoryDate(record.submittedAt) }}</time></p>
+        <p><strong>مجموع امتیاز:</strong> {{ record.totalScore | latinToPersianNumbers }}</p>
+        <p><strong>شدت علائم:</strong>
+          <span [style.color]="record.result.gaugeColor">{{ record.result.emoji }} {{ record.result.severityText }}</span>
+        </p>
+        <p><strong>توصیه:</strong> {{ record.result.recommendationText }}</p>
+        <div class="history-gauge">
+          <ngx-gauge [value]="record.totalScore" [min]="0" [max]="72" [size]="220"
+            [type]="'arch'" [thick]="15" [foregroundColor]="record.result.gaugeColor"
+            [cap]="'round'" [markers]="getSavedGaugeMarkers(record)"
+            [margin]="20"></ngx-gauge>
+          <p>{{ record.totalScore | latinToPersianNumbers }} امتیاز</p>
+        </div>
+        <h3>پاسخ‌های ثبت‌شده</h3>
+        <ol class="history-answer-list">
+          <li *ngFor="let question of questions; let index = index" class="history-answer-item">
+            <span>{{ index + 1 | latinToPersianNumbers }}. {{ question }}</span>
+            <strong>پاسخ: {{ answerLabels[record.answers[index]] }}</strong>
+          </li>
+        </ol>
+      </ng-container>
+    </mat-card-content>
+    <mat-card-actions>
+      <button mat-stroked-button type="button" class="back-from-detail-button" (click)="closeHistoryRecord()">
+        بازگشت به تاریخچه
       </button>
     </mat-card-actions>
   </mat-card>
@@ -52,21 +95,8 @@
             {{ questions[currentStep] }}
           </p>
           <mat-radio-group [formControl]="getCurrentControl()" class="options">
-            <mat-radio-button
-              *ngFor="let option of [0, 1, 2, 3, 4]"
-              [value]="option"
-            >
-              {{
-                option === 0
-                  ? "هرگز"
-                  : option === 1
-                  ? "به ندرت"
-                  : option === 2
-                  ? "گاهی اوقات"
-                  : option === 3
-                  ? "اغلب"
-                  : "تقریباً همیشه"
-              }}
+            <mat-radio-button *ngFor="let label of answerLabels; let option = index" [value]="option">
+              {{ label }}
             </mat-radio-button>
           </mat-radio-group>
         </mat-card-content>
