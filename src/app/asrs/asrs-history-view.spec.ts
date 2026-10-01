@@ -33,6 +33,18 @@ describe('ASRS saved history view', () => {
     return saved;
   }
 
+  it('keeps the history entry after the questionnaire and progress', () => {
+    const fixture = TestBed.createComponent(AsrsComponent);
+    fixture.detectChanges();
+    const root = fixture.nativeElement as HTMLElement;
+    const progress = root.querySelector('mat-progress-bar') as HTMLElement;
+    const history = root.querySelector('.history-action') as HTMLElement;
+
+    expect(progress).not.toBeNull();
+    expect(history).not.toBeNull();
+    expect(progress.compareDocumentPosition(history) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
   it('opens from a partial questionnaire and returns without changing answers or storage', () => {
     const fixture = TestBed.createComponent(AsrsComponent);
     fixture.detectChanges();

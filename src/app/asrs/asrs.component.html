@@ -4,12 +4,6 @@
   </mat-card-title>
   <mat-divider></mat-divider>
 
-  <mat-card-actions *ngIf="!showHistory" class="history-action">
-    <button mat-stroked-button type="button" class="open-history-button" (click)="openHistory()">
-      مشاهده تاریخچه ارزیابی‌ها
-    </button>
-  </mat-card-actions>
-
   <mat-card *ngIf="showHistory && selectedHistoryId === null" class="history-card" dir="rtl">
     <mat-card-title>تاریخچه ارزیابی‌ها</mat-card-title>
     <mat-divider></mat-divider>
@@ -125,7 +119,7 @@
     </mat-card-actions>
   </mat-card>
 
-  <mat-card *ngIf="!showHistory && !showResult">
+  <mat-card *ngIf="!showHistory && !showResult" class="questionnaire-card">
     <mat-card-title>
       <p class="intro-text">
         در
@@ -231,4 +225,10 @@
       </button>
     </mat-card-actions>
   </mat-card>
+
+  <mat-card-actions *ngIf="!showHistory" class="history-action">
+    <button mat-stroked-button type="button" class="open-history-button" (click)="openHistory()">
+      مشاهده تاریخچه ارزیابی‌ها
+    </button>
+  </mat-card-actions>
 </mat-card>
