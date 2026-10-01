@@ -5,6 +5,6 @@ import { AsrsModule } from './asrs/asrs.module';
   selector: 'app-root',
   standalone: true,
   imports: [AsrsModule],
-  template: '<main><app-asrs></app-asrs></main>',
+  template: '<main dir="rtl"><app-asrs></app-asrs></main>',
 })
 export class AppComponent {}

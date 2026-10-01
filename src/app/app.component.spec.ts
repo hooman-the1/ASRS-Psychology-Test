@@ -7,6 +7,32 @@ import { AsrsComponent } from './asrs/asrs.component';
 import { questions } from './asrs/asrs.constants';
 
 describe('AppComponent', () => {
+  it('lays out the questionnaire from the RTL start edge', async () => {
+    await TestBed.configureTestingModule({
+      imports: [AppComponent, NoopAnimationsModule],
+    }).compileComponents();
+
+    const fixture = TestBed.createComponent(AppComponent);
+    document.body.appendChild(fixture.nativeElement);
+    try {
+      fixture.detectChanges();
+      const main = fixture.nativeElement.querySelector('main') as HTMLElement;
+      const radio = main.querySelector('mat-radio-button') as HTMLElement;
+      const circle = radio.querySelector('.mdc-radio') as HTMLElement;
+      const label = radio.querySelector('.mdc-label') as HTMLElement;
+      const buttons = Array.from(main.querySelectorAll('.button-group button')) as HTMLElement[];
+      const progress = main.querySelector('.mdc-linear-progress__primary-bar') as HTMLElement;
+
+      expect(getComputedStyle(main).direction).toBe('rtl');
+      expect(circle.getBoundingClientRect().right).toBeGreaterThan(label.getBoundingClientRect().right);
+      expect(buttons[0].getBoundingClientRect().right).toBeGreaterThan(buttons[1].getBoundingClientRect().right);
+      expect(parseFloat(getComputedStyle(progress).transformOrigin))
+        .toBeCloseTo(progress.offsetWidth, 0);
+    } finally {
+      fixture.destroy();
+    }
+  });
+
   it('renders the ASRS questionnaire at the root', async () => {
     await TestBed.configureTestingModule({
       imports: [AppComponent, NoopAnimationsModule],
