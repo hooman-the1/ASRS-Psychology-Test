@@ -21,13 +21,18 @@ record IDs when creating a subsequent record. `isAsrsHistoryV1` validates parsed
 including field shape, version, unique IDs, timestamps, score/category consistency, and
 result snapshot types. A reader should reject invalid data before using it.
 
-`loadAsrsHistory` reads only the `asrs:history` localStorage key. If it is absent, it returns
-an empty v1 envelope without writing one. If present, it parses and validates the stored
-envelope, then returns its records in stored order with their original result snapshots.
-`saveCompletedAsrsAssessment` reads that envelope, creates a record from completed answers,
-appends it, and writes the updated envelope. The questionnaire calls it once for a valid
-submission before resetting the form. A read or write failure propagates from the storage
-helper; the result screen remains usable, while `savedRecord` stays null and
-`historySaveError` holds the failure for later recovery UI. User-facing recovery and handling
-of malformed or incompatible data belong to #59. An incompatible future shape requires a
-new version rather than interpreting it as v1.
+`loadAsrsHistory` reads only the `asrs:history` localStorage key. It returns a discriminated
+result: `{ status: 'available', history }` for a valid v1 envelope or a missing key, and
+`{ status: 'unavailable' }` for unreadable storage, malformed JSON, or any invalid record.
+For a missing key, `history` is an empty v1 envelope and no key is created. A history view
+must show an unavailable state separately from an empty list; it must never show a subset of
+an invalid envelope. Valid records retain stored order and original result snapshots.
+
+`saveCompletedAsrsAssessment` saves only when loading returns an available history. It
+creates a record from completed answers, appends it, and writes the updated envelope. It
+throws on an unavailable history or storage write failure without deleting or resetting raw
+data. The questionnaire calls it once before resetting the form and still displays the
+computed result when saving fails. Its visible notice states that the assessment was not
+saved; the saved record remains null. A later submission can save when storage recovers or
+the key is restored to a valid v1 envelope. An incompatible future shape requires a new
+version rather than interpreting it as v1.

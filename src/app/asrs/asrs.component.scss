@@ -55,6 +55,14 @@ mat-progress-bar {
     margin: 8px 0;
   }
 
+  .history-unsaved-notice {
+    padding: 10px 12px;
+    border: 1px solid #a86c00;
+    border-radius: 4px;
+    background-color: #fff6e5;
+    color: #503600;
+  }
+
   .retake-button {
     width: 100%;
     margin-top: 20px;

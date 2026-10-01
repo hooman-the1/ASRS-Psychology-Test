@@ -6,7 +6,7 @@ describe('ASRS browser history storage', () => {
   afterEach(() => localStorage.removeItem(ASRS_HISTORY_STORAGE_KEY));
 
   it('does not create storage on a fresh read and preserves stored snapshots on later reads', () => {
-    expect(loadAsrsHistory()).toEqual({ version: 1, records: [] });
+    expect(loadAsrsHistory()).toEqual({ status: 'available', history: { version: 1, records: [] } });
     expect(localStorage.getItem(ASRS_HISTORY_STORAGE_KEY)).toBeNull();
 
     const first = saveCompletedAsrsAssessment(Array(18).fill(0));
@@ -15,8 +15,9 @@ describe('ASRS browser history storage', () => {
     localStorage.setItem(ASRS_HISTORY_STORAGE_KEY, JSON.stringify(stored));
     const beforeRead = localStorage.getItem(ASRS_HISTORY_STORAGE_KEY);
 
-    expect(loadAsrsHistory().records[0].result.severityText).toBe('Historical wording');
-    expect(loadAsrsHistory().records[0].id).toBe(first.id);
+    expect(loadAsrsHistory()).toEqual({ status: 'available', history: stored });
+    expect(stored.records[0].result.severityText).toBe('Historical wording');
+    expect(stored.records[0].id).toBe(first.id);
     expect(localStorage.getItem(ASRS_HISTORY_STORAGE_KEY)).toBe(beforeRead);
   });
 
@@ -30,7 +31,7 @@ describe('ASRS browser history storage', () => {
     const parsed: unknown = JSON.parse(raw!);
 
     expect(isAsrsHistoryV1(parsed)).toBeTrue();
-    expect(loadAsrsHistory().records).toEqual([first, second]);
+    expect(loadAsrsHistory()).toEqual({ status: 'available', history: { version: 1, records: [first, second] } });
     expect(first.answers[0]).toBe(0);
     expect(first.id).not.toBe(second.id);
     expect(first.submittedAt).toMatch(/Z$/);
@@ -58,8 +59,8 @@ describe('ASRS browser history storage', () => {
 
   it('surfaces read and write failures without claiming a saved record', () => {
     spyOn(localStorage, 'getItem').and.throwError('read failed');
-    expect(() => loadAsrsHistory()).toThrowError('read failed');
-    expect(() => saveCompletedAsrsAssessment(Array(18).fill(0))).toThrowError('read failed');
+    expect(loadAsrsHistory()).toEqual({ status: 'unavailable' });
+    expect(() => saveCompletedAsrsAssessment(Array(18).fill(0))).toThrowError('ASRS history unavailable');
   });
 
   it('surfaces write failures and does not replace existing stored history', () => {
@@ -69,6 +70,57 @@ describe('ASRS browser history storage', () => {
 
     expect(() => saveCompletedAsrsAssessment(Array(18).fill(4))).toThrowError('write failed');
     expect(localStorage.getItem(ASRS_HISTORY_STORAGE_KEY)).toBe(before);
-    expect(loadAsrsHistory().records).toEqual([first]);
+    expect(loadAsrsHistory()).toEqual({ status: 'available', history: { version: 1, records: [first] } });
+  });
+
+  it('rejects every malformed or incompatible envelope without changing the raw value', () => {
+    for (const raw of ['{', 'null', '[]', '{}', '{"records":[]}',
+      '{"version":2,"records":[]}', '{"version":1,"records":{}}']) {
+      localStorage.setItem(ASRS_HISTORY_STORAGE_KEY, raw);
+      expect(loadAsrsHistory()).withContext(raw).toEqual({ status: 'unavailable' });
+      expect(() => saveCompletedAsrsAssessment(Array(18).fill(0))).withContext(raw)
+        .toThrowError('ASRS history unavailable');
+      expect(localStorage.getItem(ASRS_HISTORY_STORAGE_KEY)).withContext(raw).toBe(raw);
+    }
+  });
+
+  it('rejects a whole envelope if even its last record is invalid, then recovers after a valid restore', () => {
+    const first = saveCompletedAsrsAssessment(Array(18).fill(0));
+    const validRaw = localStorage.getItem(ASRS_HISTORY_STORAGE_KEY)!;
+    const invalid = JSON.parse(validRaw) as AsrsHistoryV1;
+    invalid.records.push({ ...first, id: 'second', result: { ...first.result, warningText: 'invalid' as never } });
+    const raw = JSON.stringify(invalid);
+    localStorage.setItem(ASRS_HISTORY_STORAGE_KEY, raw);
+    expect(loadAsrsHistory()).toEqual({ status: 'unavailable' });
+    expect(() => saveCompletedAsrsAssessment(Array(18).fill(4))).toThrowError('ASRS history unavailable');
+    expect(localStorage.getItem(ASRS_HISTORY_STORAGE_KEY)).toBe(raw);
+
+    localStorage.setItem(ASRS_HISTORY_STORAGE_KEY, validRaw);
+    const second = saveCompletedAsrsAssessment(Array(18).fill(4));
+    expect(loadAsrsHistory()).toEqual({ status: 'available', history: { version: 1, records: [first, second] } });
+  });
+
+  it('never exposes a valid-looking subset when a later record violates the v1 contract', () => {
+    const first = saveCompletedAsrsAssessment(Array(18).fill(0));
+    const invalidRecords = [
+      { ...first },
+      { ...first, id: 'later', submittedAt: '2026-02-30T12:34:56.789Z' },
+      { ...first, id: 'later', answers: Array(17).fill(0) },
+      { ...first, id: 'later', answers: Array(18).fill(5) },
+      { ...first, id: 'later', totalScore: 1 },
+      { ...first, id: 'later', severityCategory: 'severe' },
+      { ...first, id: 'later', result: { ...first.result, emoji: undefined } },
+      { ...first, id: 'later', result: { ...first.result, gaugeColor: 'blue' } },
+      { ...first, id: 'later', result: { ...first.result, warningText: 'warning' } },
+    ];
+
+    for (const [index, invalidRecord] of invalidRecords.entries()) {
+      const raw = JSON.stringify({ version: 1, records: [first, invalidRecord] });
+      localStorage.setItem(ASRS_HISTORY_STORAGE_KEY, raw);
+      expect(loadAsrsHistory()).withContext(`invalid case ${index}`).toEqual({ status: 'unavailable' });
+      expect(() => saveCompletedAsrsAssessment(Array(18).fill(4))).withContext(`invalid case ${index}`)
+        .toThrowError('ASRS history unavailable');
+      expect(localStorage.getItem(ASRS_HISTORY_STORAGE_KEY)).withContext(`invalid case ${index}`).toBe(raw);
+    }
   });
 });

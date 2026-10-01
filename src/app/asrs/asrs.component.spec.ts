@@ -252,6 +252,62 @@ describe('AsrsComponent local assessment flow', () => {
     expect(component.historySaveError).toEqual(jasmine.any(Error));
     expect(localStorage.getItem(ASRS_HISTORY_STORAGE_KEY)).toBeNull();
     expect(fixture.nativeElement.querySelector('.result-card')).not.toBeNull();
+    const notice = fixture.nativeElement.querySelector('.history-unsaved-notice') as HTMLElement;
+    expect(notice.textContent).toContain('در تاریخچه ذخیره نشد');
+    expect(notice.textContent).not.toContain(storageError.message);
+  });
+
+  it('shows an unsaved result without replacing incompatible history and clears the notice after recovery', () => {
+    const raw = '{"version":2,"records":[]}';
+    localStorage.setItem(ASRS_HISTORY_STORAGE_KEY, raw);
+    const fixture = TestBed.createComponent(AsrsComponent);
+    fixture.detectChanges();
+    const component = fixture.componentInstance;
+    component.answers.controls.forEach(control => control.setValue(4));
+
+    component.submit();
+    fixture.detectChanges();
+    expect(component.totalScore).toBe(72);
+    expect(component.savedRecord).toBeNull();
+    expect(localStorage.getItem(ASRS_HISTORY_STORAGE_KEY)).toBe(raw);
+    expect((fixture.nativeElement.querySelector('.history-unsaved-notice') as HTMLElement).textContent)
+      .toContain('در تاریخچه ذخیره نشد');
+    expect((fixture.nativeElement.querySelector('.result-card') as HTMLElement).textContent)
+      .toContain(SEVERITY_LEVELS.severe.recommendation);
+
+    localStorage.removeItem(ASRS_HISTORY_STORAGE_KEY);
+    component.restart();
+    component.answers.controls.forEach(control => control.setValue(0));
+    component.submit();
+    fixture.detectChanges();
+    expect(component.savedRecord).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('.history-unsaved-notice')).toBeNull();
+  });
+
+  it('keeps the questionnaire and result usable when history cannot be read', () => {
+    const getItem = spyOn(localStorage, 'getItem').and.throwError('private storage failure');
+    const fixture = TestBed.createComponent(AsrsComponent);
+    expect(() => fixture.detectChanges()).not.toThrow();
+    const component = fixture.componentInstance;
+    component.answers.controls.forEach(control => control.setValue(1));
+
+    component.submit();
+    fixture.detectChanges();
+    expect(component.totalScore).toBe(18);
+    expect(component.savedRecord).toBeNull();
+    expect((fixture.nativeElement.querySelector('.result-card') as HTMLElement).textContent)
+      .toContain(SEVERITY_LEVELS.mild.recommendation);
+    const notice = fixture.nativeElement.querySelector('.history-unsaved-notice') as HTMLElement;
+    expect(notice.textContent).toContain('در تاریخچه ذخیره نشد');
+    expect(notice.textContent).not.toContain('private storage failure');
+
+    getItem.and.callThrough();
+    component.restart();
+    component.answers.controls.forEach(control => control.setValue(0));
+    component.submit();
+    fixture.detectChanges();
+    expect(component.savedRecord).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('.history-unsaved-notice')).toBeNull();
   });
 
   it('classifies every valid score at the copied ASRS thresholds', () => {
