@@ -12,6 +12,39 @@ mat-card-title.main-title {
   line-height: 35px;
 }
 
+.history-action {
+  justify-content: flex-end;
+  margin-top: 12px;
+}
+
+.history-card {
+  .history-list {
+    list-style: none;
+    padding: 0;
+    margin: 16px 0 0;
+  }
+
+  .history-item {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 20px;
+    padding: 14px 0;
+    border-bottom: 1px solid #ddd;
+    line-height: 1.8;
+  }
+
+  .history-item time {
+    flex-basis: 100%;
+    font-weight: 600;
+  }
+
+  .history-empty,
+  .history-unavailable {
+    margin: 20px 0;
+    line-height: 1.8;
+  }
+}
+
 ::ng-deep ngx-gauge .reading-block {
   display: none !important;
 }

@@ -19,7 +19,8 @@ describe('AppComponent', () => {
     expect(main.textContent).toContain('ASRS');
     expect(main.textContent).toContain(questions[0]);
     expect(main.querySelectorAll('mat-radio-button').length).toBe(5);
-    expect(main.querySelectorAll('mat-card-actions button').length).toBe(2);
+    expect(main.querySelectorAll('.button-group button').length).toBe(2);
+    expect(main.querySelector('.open-history-button')).not.toBeNull();
   });
 
   it('renders all 18 questions in order with the same five labeled numeric choices', async () => {

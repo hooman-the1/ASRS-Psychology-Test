@@ -12,7 +12,7 @@ import {
 
 import { SeverityCategory, questions } from './asrs.constants';
 import { AsrsHistoryRecordV1 } from './asrs-history';
-import { saveCompletedAsrsAssessment } from './asrs-history-storage';
+import { loadAsrsHistory, saveCompletedAsrsAssessment } from './asrs-history-storage';
 
 @Component({
   selector: 'app-asrs',
@@ -28,6 +28,12 @@ export class AsrsComponent implements OnInit {
   questions = questions;
   savedRecord: AsrsHistoryRecordV1 | null = null;
   historySaveError: unknown = null;
+  showHistory = false;
+  historyStatus: 'available' | 'unavailable' = 'available';
+  historyRecords: AsrsHistoryRecordV1[] = [];
+  private readonly historyDateFormatter = new Intl.DateTimeFormat('fa-IR', {
+    dateStyle: 'medium', timeStyle: 'short',
+  });
 
   severityText = '';
   recommendationText = '';
@@ -54,6 +60,25 @@ export class AsrsComponent implements OnInit {
 
   getCurrentControl(): FormControl {
     return this.answers.at(this.currentStep) as FormControl;
+  }
+
+  openHistory(): void {
+    const loaded = loadAsrsHistory();
+    this.historyStatus = loaded.status;
+    this.historyRecords = loaded.status === 'available'
+      ? loaded.history.records.map((record, index) => ({ record, index }))
+        .sort((a, b) => Date.parse(b.record.submittedAt) - Date.parse(a.record.submittedAt) || a.index - b.index)
+        .map(({ record }) => record)
+      : [];
+    this.showHistory = true;
+  }
+
+  closeHistory(): void {
+    this.showHistory = false;
+  }
+
+  formatHistoryDate(submittedAt: string): string {
+    return this.historyDateFormatter.format(new Date(submittedAt));
   }
 
   next(): void {

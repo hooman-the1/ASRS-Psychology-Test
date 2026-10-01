@@ -4,7 +4,38 @@
   </mat-card-title>
   <mat-divider></mat-divider>
 
-  <mat-card *ngIf="!showResult">
+  <mat-card-actions *ngIf="!showHistory" class="history-action">
+    <button mat-stroked-button type="button" class="open-history-button" (click)="openHistory()">
+      مشاهده تاریخچه ارزیابی‌ها
+    </button>
+  </mat-card-actions>
+
+  <mat-card *ngIf="showHistory" class="history-card" dir="rtl">
+    <mat-card-title>تاریخچه ارزیابی‌ها</mat-card-title>
+    <mat-divider></mat-divider>
+    <mat-card-content>
+      <p *ngIf="historyStatus === 'unavailable'" class="history-unavailable" role="status">
+        تاریخچه ارزیابی‌ها در دسترس نیست. لطفاً بعداً دوباره تلاش کنید.
+      </p>
+      <p *ngIf="historyStatus === 'available' && historyRecords.length === 0" class="history-empty" role="status">
+        هنوز ارزیابی ذخیره‌شده‌ای در تاریخچه ندارید.
+      </p>
+      <ol *ngIf="historyStatus === 'available' && historyRecords.length > 0" class="history-list">
+        <li *ngFor="let record of historyRecords" class="history-item" [attr.data-record-id]="record.id">
+          <time [attr.datetime]="record.submittedAt">{{ formatHistoryDate(record.submittedAt) }}</time>
+          <span>امتیاز: {{ record.totalScore | latinToPersianNumbers }}</span>
+          <span>نتیجه: {{ record.result.severityText }}</span>
+        </li>
+      </ol>
+    </mat-card-content>
+    <mat-card-actions>
+      <button mat-stroked-button type="button" class="back-from-history-button" (click)="closeHistory()">
+        بازگشت به ارزیابی
+      </button>
+    </mat-card-actions>
+  </mat-card>
+
+  <mat-card *ngIf="!showHistory && !showResult">
     <mat-card-title>
       <p class="intro-text">
         در
@@ -72,7 +103,7 @@
     </form>
   </mat-card>
 
-  <mat-card *ngIf="showResult" class="result-card">
+  <mat-card *ngIf="!showHistory && showResult" class="result-card">
     <mat-card-title>نتیجه تست</mat-card-title>
     <mat-divider></mat-divider>
     <mat-card-content class="mt-5">
