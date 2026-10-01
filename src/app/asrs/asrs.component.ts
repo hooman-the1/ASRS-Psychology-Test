@@ -106,6 +106,13 @@ export class AsrsComponent implements OnInit {
     this.asrsForm.reset();
     this.currentStep = 0;
     this.totalScore = 0;
+    this.gaugeValue = 0;
+    this.gaugeMarkers = {};
+    this.severityText = '';
+    this.recommendationText = '';
+    this.severityEmojiIcon = '';
+    this.severityColor = '';
+    this.gaugeColorCode = '';
     this.showResult = false;
     this.savedRecord = null;
     this.historySaveError = null;

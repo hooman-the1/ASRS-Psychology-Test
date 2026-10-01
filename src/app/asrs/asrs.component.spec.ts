@@ -444,4 +444,128 @@ describe('AsrsComponent local assessment flow', () => {
     expect(localStorage.getItem('asrs_session_id')).toBe('existing-session');
     localStorage.removeItem('asrs_session_id');
   });
+
+  it('restarts a saved result with empty result state and unchanged history, then saves a distinct result', () => {
+    const fixture = TestBed.createComponent(AsrsComponent);
+    fixture.detectChanges();
+    const component = fixture.componentInstance;
+    component.answers.controls.forEach(control => control.setValue(4));
+    component.submit();
+    fixture.detectChanges();
+    const firstRaw = localStorage.getItem(ASRS_HISTORY_STORAGE_KEY)!;
+    const firstRecord = (JSON.parse(firstRaw) as AsrsHistoryV1).records[0];
+    const setItem = spyOn(localStorage, 'setItem').and.callThrough();
+    const removeItem = spyOn(localStorage, 'removeItem').and.callThrough();
+
+    const restartButton = fixture.nativeElement.querySelector('.retake-button') as HTMLButtonElement;
+    expect(restartButton.textContent).toContain('انجام مجدد تست');
+    restartButton.click();
+    fixture.detectChanges();
+
+    expect(component.showResult).toBeFalse();
+    expect(component.currentStep).toBe(0);
+    expect(component.answers.controls.every(control => control.invalid && control.value === null)).toBeTrue();
+    expect(component.asrsForm.invalid).toBeTrue();
+    expect(component.totalScore).toBe(0);
+    expect(component.gaugeValue).toBe(0);
+    expect(component.gaugeMarkers).toEqual({});
+    expect(component.severityText).toBe('');
+    expect(component.recommendationText).toBe('');
+    expect(component.severityEmojiIcon).toBe('');
+    expect(component.severityColor).toBe('');
+    expect(component.gaugeColorCode).toBe('');
+    expect(component.savedRecord).toBeNull();
+    expect(component.historySaveError).toBeNull();
+    expect(fixture.nativeElement.querySelector('.result-card')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.history-unsaved-notice')).toBeNull();
+    const buttons = fixture.nativeElement.querySelectorAll('.button-group button') as NodeListOf<HTMLButtonElement>;
+    expect(buttons[0].disabled).toBeTrue();
+    expect(buttons[1].disabled).toBeTrue();
+    expect(Number(fixture.nativeElement.querySelector('mat-progress-bar').getAttribute('aria-valuenow')))
+      .toBeCloseTo(100 / 18, 4);
+    expect(localStorage.getItem(ASRS_HISTORY_STORAGE_KEY)).toBe(firstRaw);
+    expect(setItem).not.toHaveBeenCalled();
+    expect(removeItem).not.toHaveBeenCalled();
+
+    component.getCurrentControl().setValue(1);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.result-card')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.history-unsaved-notice')).toBeNull();
+    expect(localStorage.getItem(ASRS_HISTORY_STORAGE_KEY)).toBe(firstRaw);
+
+    fixture.destroy();
+    const refreshed = TestBed.createComponent(AsrsComponent);
+    refreshed.detectChanges();
+    expect(localStorage.getItem(ASRS_HISTORY_STORAGE_KEY)).toBe(firstRaw);
+    refreshed.componentInstance.answers.controls.forEach(control => control.setValue(0));
+    refreshed.componentInstance.submit();
+    refreshed.detectChanges();
+    const records = (JSON.parse(localStorage.getItem(ASRS_HISTORY_STORAGE_KEY)!) as AsrsHistoryV1).records;
+    expect(records.length).toBe(2);
+    expect(records[0]).toEqual(firstRecord);
+    expect(records[1].id).not.toBe(firstRecord.id);
+    expect(records[1].totalScore).toBe(0);
+    expect(refreshed.componentInstance.gaugeValue).toBe(0);
+    expect(refreshed.componentInstance.severityText).toBe(SEVERITY_LEVELS.minimal.severity);
+    expect(refreshed.componentInstance.recommendationText).toBe(SEVERITY_LEVELS.minimal.recommendation);
+    expect(refreshed.componentInstance.gaugeColorCode).toBe(SEVERITY_LEVELS.minimal.gaugeColor);
+    expect(refreshed.componentInstance.gaugeMarkers).toEqual(getGaugeMarkers(0, SEVERITY_LEVELS.minimal.gaugeColor));
+
+    const savedRaw = localStorage.getItem(ASRS_HISTORY_STORAGE_KEY)!;
+    refreshed.componentInstance.restart();
+    refreshed.componentInstance.answers.controls.forEach(control => control.setValue(2));
+    setItem.and.throwError('write failed');
+    refreshed.componentInstance.submit();
+    refreshed.detectChanges();
+    expect(refreshed.componentInstance.totalScore).toBe(36);
+    expect(refreshed.nativeElement.querySelector('.history-unsaved-notice')).not.toBeNull();
+    expect(localStorage.getItem(ASRS_HISTORY_STORAGE_KEY)).toBe(savedRaw);
+    refreshed.componentInstance.restart();
+    refreshed.detectChanges();
+    expect(refreshed.componentInstance.historySaveError).toBeNull();
+    expect(refreshed.componentInstance.savedRecord).toBeNull();
+    expect(refreshed.nativeElement.querySelector('.history-unsaved-notice')).toBeNull();
+    expect(localStorage.getItem(ASRS_HISTORY_STORAGE_KEY)).toBe(savedRaw);
+  });
+
+  it('restarts an unsaved result without touching invalid history and clears a later save failure', () => {
+    const invalidHistory = '{"version":2,"records":[]}';
+    localStorage.setItem(ASRS_HISTORY_STORAGE_KEY, invalidHistory);
+    const fixture = TestBed.createComponent(AsrsComponent);
+    fixture.detectChanges();
+    const component = fixture.componentInstance;
+    component.answers.controls.forEach(control => control.setValue(4));
+    component.submit();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.history-unsaved-notice')).not.toBeNull();
+    const setItem = spyOn(localStorage, 'setItem').and.callThrough();
+    const removeItem = spyOn(localStorage, 'removeItem').and.callThrough();
+
+    (fixture.nativeElement.querySelector('.retake-button') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(component.historySaveError).toBeNull();
+    expect(component.gaugeValue).toBe(0);
+    expect(component.gaugeMarkers).toEqual({});
+    expect(fixture.nativeElement.querySelector('.result-card')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.history-unsaved-notice')).toBeNull();
+    expect(localStorage.getItem(ASRS_HISTORY_STORAGE_KEY)).toBe(invalidHistory);
+    expect(setItem).not.toHaveBeenCalled();
+    expect(removeItem).not.toHaveBeenCalled();
+
+    removeItem.and.callThrough();
+    localStorage.removeItem(ASRS_HISTORY_STORAGE_KEY);
+    component.answers.controls.forEach(control => control.setValue(0));
+    setItem.and.throwError('write failed');
+    component.submit();
+    fixture.detectChanges();
+    expect(component.showResult).toBeTrue();
+    expect(component.totalScore).toBe(0);
+    expect(fixture.nativeElement.querySelector('.history-unsaved-notice')).not.toBeNull();
+    component.restart();
+    fixture.detectChanges();
+    expect(component.historySaveError).toBeNull();
+    expect(component.severityText).toBe('');
+    expect(component.gaugeMarkers).toEqual({});
+    expect(fixture.nativeElement.querySelector('.history-unsaved-notice')).toBeNull();
+  });
 });
