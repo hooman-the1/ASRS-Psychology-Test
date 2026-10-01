@@ -11,8 +11,8 @@ import {
 } from './asrs.helpers';
 
 import { SeverityCategory, questions } from './asrs.constants';
-import { ASRS_HISTORY_STORAGE_KEY, AsrsHistoryRecordV1 } from './asrs-history';
-import { deleteAsrsHistoryRecord, loadAsrsHistory, saveCompletedAsrsAssessment } from './asrs-history-storage';
+import { ASRS_HISTORY_STORAGE_KEY, AsrsHistoryRecordV1, AsrsHistoryV1 } from './asrs-history';
+import { clearAsrsHistory, deleteAsrsHistoryRecord, loadAsrsHistory, saveCompletedAsrsAssessment } from './asrs-history-storage';
 
 @Component({
   selector: 'app-asrs',
@@ -36,6 +36,8 @@ export class AsrsComponent implements OnInit {
   detailStatus: 'available' | 'not-found' | 'unavailable' = 'not-found';
   pendingDeleteRecord: AsrsHistoryRecordV1 | null = null;
   historyDeleteStatus: 'deleted' | 'not-found' | 'unavailable' | 'failed' | null = null;
+  pendingClearHistory: AsrsHistoryV1 | null = null;
+  historyClearStatus: 'cleared' | 'changed' | 'unavailable' | 'failed' | null = null;
   readonly answerLabels = ['هرگز', 'به ندرت', 'گاهی اوقات', 'اغلب', 'تقریباً همیشه'];
   private readonly historyDateFormatter = new Intl.DateTimeFormat('fa-IR', {
     dateStyle: 'medium', timeStyle: 'short',
@@ -73,6 +75,8 @@ export class AsrsComponent implements OnInit {
     this.selectedHistoryRecord = null;
     this.pendingDeleteRecord = null;
     this.historyDeleteStatus = null;
+    this.pendingClearHistory = null;
+    this.historyClearStatus = null;
     const loaded = loadAsrsHistory();
     this.historyStatus = loaded.status;
     this.historyRecords = loaded.status === 'available'
@@ -89,6 +93,39 @@ export class AsrsComponent implements OnInit {
     this.selectedHistoryRecord = null;
     this.pendingDeleteRecord = null;
     this.historyDeleteStatus = null;
+    this.pendingClearHistory = null;
+    this.historyClearStatus = null;
+  }
+
+  startHistoryClear(): void {
+    const loaded = loadAsrsHistory();
+    if (loaded.status !== 'available' || loaded.history.records.length === 0) {
+      this.openHistory();
+      return;
+    }
+    this.pendingDeleteRecord = null;
+    this.historyDeleteStatus = null;
+    this.historyClearStatus = null;
+    this.pendingClearHistory = loaded.history;
+  }
+
+  cancelHistoryClear(): void {
+    this.pendingClearHistory = null;
+  }
+
+  confirmHistoryClear(): void {
+    const expected = this.pendingClearHistory;
+    if (expected === null) return;
+    this.pendingClearHistory = null;
+    let status: typeof this.historyClearStatus;
+    try {
+      const result = clearAsrsHistory(expected);
+      status = result === 'empty' ? 'changed' : result;
+    } catch {
+      status = 'failed';
+    }
+    this.openHistory();
+    this.historyClearStatus = status;
   }
 
   startHistoryDelete(record: AsrsHistoryRecordV1): void {

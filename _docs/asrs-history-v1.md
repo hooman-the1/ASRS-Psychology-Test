@@ -42,3 +42,10 @@ deletion. It removes only the selected record ID, preserves the remaining record
 storage order, and reports a missing ID without writing. Unavailable history is left untouched;
 a failed write is reported to the view. The history list requires a second confirmation step
 showing the selected date, result, and score before calling this operation.
+
+`clearAsrsHistory` requires an explicit all-record confirmation. The history view captures the
+validated v1 envelope and shows its record count in Persian. At confirmation, the operation
+re-reads and validates storage, compares the full envelope with that snapshot, and writes one
+valid empty v1 envelope only when the same nonempty history remains. Changed, empty, unreadable,
+malformed, and unsupported histories are left untouched. A failed write is reported to the view.
+The action never touches another localStorage key or the active questionnaire and result.

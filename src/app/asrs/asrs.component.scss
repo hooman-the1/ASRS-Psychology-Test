@@ -44,7 +44,8 @@ mat-card-title.main-title {
     line-height: 1.8;
   }
 
-  .history-delete-confirmation {
+  .history-delete-confirmation,
+  .history-clear-confirmation {
     margin: 16px 0;
     padding: 12px 16px;
     border: 1px solid #a86c00;
@@ -61,8 +62,15 @@ mat-card-title.main-title {
 
   .history-delete-success,
   .history-delete-not-found,
-  .history-delete-failed {
+  .history-delete-failed,
+  .history-clear-success,
+  .history-clear-changed,
+  .history-clear-failed {
     line-height: 1.8;
+  }
+
+  .clear-history-button {
+    margin-top: 20px;
   }
 
   .history-detail-not-found,

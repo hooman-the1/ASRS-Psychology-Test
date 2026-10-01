@@ -49,3 +49,17 @@ export function deleteAsrsHistoryRecord(id: string): 'deleted' | 'not-found' | '
   } satisfies AsrsHistoryV1));
   return 'deleted';
 }
+
+/** Re-read the complete v1 history and clear only the set the user confirmed. */
+export function clearAsrsHistory(expected: AsrsHistoryV1): 'cleared' | 'changed' | 'empty' | 'unavailable' {
+  const loaded = loadAsrsHistory();
+  if (loaded.status === 'unavailable') return 'unavailable';
+  if (loaded.history.records.length === 0) return 'empty';
+  if (JSON.stringify(loaded.history) !== JSON.stringify(expected)) return 'changed';
+
+  localStorage.setItem(ASRS_HISTORY_STORAGE_KEY, JSON.stringify({
+    version: 1,
+    records: [],
+  } satisfies AsrsHistoryV1));
+  return 'cleared';
+}

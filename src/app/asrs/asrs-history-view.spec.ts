@@ -515,4 +515,135 @@ describe('ASRS saved history view', () => {
     expect(component.savedRecord).toBeNull();
     expect(root.querySelector('.history-unsaved-notice')).not.toBeNull();
   });
+
+  it('confirms all records separately, cancels without writes, then clears and keeps the current questionnaire', () => {
+    const records = [record('one', '2026-04-03T09:00:00.000Z', 1, 'یک'),
+      record('two', '2026-04-04T09:00:00.000Z', 2, 'دو')];
+    const raw = JSON.stringify({ version: 1, records });
+    localStorage.setItem(ASRS_HISTORY_STORAGE_KEY, raw);
+    localStorage.setItem('other:assessment', 'untouched');
+    const fixture = TestBed.createComponent(AsrsComponent);
+    fixture.detectChanges();
+    const component = fixture.componentInstance;
+    component.answers.at(0).setValue(4);
+    component.next();
+    const root = fixture.nativeElement as HTMLElement;
+    (root.querySelector('.open-history-button') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    const clearButton = root.querySelector('.clear-history-button') as HTMLButtonElement;
+    expect(clearButton.textContent).toContain('همه');
+    expect(clearButton.closest('.history-item')).toBeNull();
+    clearButton.click();
+    fixture.detectChanges();
+    expect(root.querySelector('.history-clear-confirmation')?.textContent).toContain('۲');
+    expect(root.querySelector('.history-clear-confirmation')?.textContent).toContain('همه');
+    expect(localStorage.getItem(ASRS_HISTORY_STORAGE_KEY)).toBe(raw);
+    (root.querySelector('.cancel-history-clear-button') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(root.querySelectorAll('.history-item').length).toBe(2);
+    expect(localStorage.getItem(ASRS_HISTORY_STORAGE_KEY)).toBe(raw);
+    (root.querySelector('.clear-history-button') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    (root.querySelector('.confirm-history-clear-button') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(root.querySelector('.history-clear-success')).not.toBeNull();
+    expect(root.querySelector('.history-empty')).not.toBeNull();
+    expect(root.querySelector('.clear-history-button')).toBeNull();
+    expect(localStorage.getItem(ASRS_HISTORY_STORAGE_KEY)).toBe('{"version":1,"records":[]}');
+    expect(localStorage.getItem('other:assessment')).toBe('untouched');
+    component.openHistoryRecord('one');
+    fixture.detectChanges();
+    expect(root.querySelector('.history-detail-not-found')).not.toBeNull();
+    component.closeHistoryRecord();
+    fixture.detectChanges();
+    (root.querySelector('.back-from-history-button') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(component.currentStep).toBe(1);
+    expect(component.answers.at(0).value).toBe(4);
+    fixture.destroy();
+    const refreshed = TestBed.createComponent(AsrsComponent);
+    refreshed.detectChanges();
+    (refreshed.nativeElement.querySelector('.open-history-button') as HTMLButtonElement).click();
+    refreshed.detectChanges();
+    expect(refreshed.nativeElement.querySelector('.history-empty')).not.toBeNull();
+    localStorage.removeItem('other:assessment');
+  });
+
+  it('refreshes changed records without clearing, and reports write failure without hiding records', () => {
+    const first = record('one', '2026-04-03T09:00:00.000Z', 1, 'یک');
+    localStorage.setItem(ASRS_HISTORY_STORAGE_KEY, JSON.stringify({ version: 1, records: [first] }));
+    const fixture = TestBed.createComponent(AsrsComponent);
+    fixture.detectChanges();
+    const root = fixture.nativeElement as HTMLElement;
+    (root.querySelector('.open-history-button') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    (root.querySelector('.clear-history-button') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    const second = record('two', '2026-04-04T09:00:00.000Z', 2, 'دو');
+    const changed = JSON.stringify({ version: 1, records: [first, second] });
+    localStorage.setItem(ASRS_HISTORY_STORAGE_KEY, changed);
+    (root.querySelector('.confirm-history-clear-button') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(root.querySelector('.history-clear-changed')).not.toBeNull();
+    expect(root.querySelector('.history-clear-confirmation')).toBeNull();
+    expect(root.querySelectorAll('.history-item').length).toBe(2);
+    expect(localStorage.getItem(ASRS_HISTORY_STORAGE_KEY)).toBe(changed);
+    (root.querySelector('.clear-history-button') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(root.querySelector('.history-clear-confirmation')?.textContent).toContain('۲');
+    spyOn(localStorage, 'setItem').and.throwError('write failed');
+    (root.querySelector('.confirm-history-clear-button') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(root.querySelector('.history-clear-failed')).not.toBeNull();
+    expect(root.querySelector('.history-empty')).toBeNull();
+    expect(root.querySelectorAll('.history-item').length).toBe(2);
+    expect(localStorage.getItem(ASRS_HISTORY_STORAGE_KEY)).toBe(changed);
+  });
+
+  it('does not offer clear-all for empty or unavailable history', () => {
+    const fixture = TestBed.createComponent(AsrsComponent);
+    fixture.detectChanges();
+    const root = fixture.nativeElement as HTMLElement;
+    (root.querySelector('.open-history-button') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(root.querySelector('.clear-history-button')).toBeNull();
+    expect(localStorage.getItem(ASRS_HISTORY_STORAGE_KEY)).toBeNull();
+    for (const raw of ['{"version":1,"records":[]}', '{bad', '{"version":2,"records":[]}',
+      '{"version":1,"records":[{}]}']) {
+      localStorage.setItem(ASRS_HISTORY_STORAGE_KEY, raw);
+      fixture.componentInstance.openHistory();
+      fixture.detectChanges();
+      expect(root.querySelector('.clear-history-button')).toBeNull();
+      expect(localStorage.getItem(ASRS_HISTORY_STORAGE_KEY)).toBe(raw);
+    }
+  });
+
+  it('keeps an unsaved current result and its notice through clear confirmation and success', () => {
+    const saved = record('saved', '2026-04-03T09:00:00.000Z', 1, 'پیشین');
+    localStorage.setItem(ASRS_HISTORY_STORAGE_KEY, JSON.stringify({ version: 1, records: [saved] }));
+    const fixture = TestBed.createComponent(AsrsComponent);
+    fixture.detectChanges();
+    const component = fixture.componentInstance;
+    component.answers.controls.forEach(control => control.setValue(4));
+    spyOn(localStorage, 'setItem').and.throwError('write failed');
+    component.submit();
+    (localStorage.setItem as jasmine.Spy).and.callThrough();
+    const root = fixture.nativeElement as HTMLElement;
+    (root.querySelector('.open-history-button') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    (root.querySelector('.clear-history-button') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    (root.querySelector('.cancel-history-clear-button') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    (root.querySelector('.clear-history-button') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    (root.querySelector('.confirm-history-clear-button') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    (root.querySelector('.back-from-history-button') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(component.showResult).toBeTrue();
+    expect(component.totalScore).toBe(72);
+    expect(component.savedRecord).toBeNull();
+    expect(root.querySelector('.history-unsaved-notice')).not.toBeNull();
+  });
 });
