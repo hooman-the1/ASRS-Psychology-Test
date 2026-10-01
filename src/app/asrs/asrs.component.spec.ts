@@ -11,11 +11,13 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { questions, SEVERITY_LEVELS } from './asrs.constants';
 import { getGaugeMarkers, getSeverityCategory } from './asrs.helpers';
 import { AsrsComponent } from './asrs.component';
+import { ASRS_HISTORY_STORAGE_KEY, AsrsHistoryV1 } from './asrs-history';
 import { AsrsGaugeComponent } from './asrs-gauge.component';
 import { LatinToPersianNumbersPipe } from './latin-to-persian-numbers.pipe';
 
 describe('AsrsComponent local assessment flow', () => {
   beforeEach(async () => {
+    localStorage.removeItem(ASRS_HISTORY_STORAGE_KEY);
     await TestBed.configureTestingModule({
       declarations: [AsrsComponent],
       imports: [
@@ -25,6 +27,7 @@ describe('AsrsComponent local assessment flow', () => {
       ],
     }).compileComponents();
   });
+  afterEach(() => localStorage.removeItem(ASRS_HISTORY_STORAGE_KEY));
 
   it('starts with one required, unanswered control per question without a session', () => {
     const getItem = spyOn(localStorage, 'getItem').and.callThrough();
@@ -71,6 +74,23 @@ describe('AsrsComponent local assessment flow', () => {
     expect(fixture.nativeElement.querySelector('button[color="accent"]')).not.toBeNull();
     component.next();
     expect(component.currentStep).toBe(17);
+  });
+
+  it('does not persist partial answers across a fresh questionnaire instance', () => {
+    const fixture = TestBed.createComponent(AsrsComponent);
+    fixture.detectChanges();
+    fixture.componentInstance.answers.at(0).setValue(0);
+    fixture.componentInstance.answers.at(1).setValue(4);
+    fixture.componentInstance.next();
+    fixture.componentInstance.prev();
+    fixture.componentInstance.submit();
+    expect(localStorage.getItem(ASRS_HISTORY_STORAGE_KEY)).toBeNull();
+
+    fixture.destroy();
+    const freshFixture = TestBed.createComponent(AsrsComponent);
+    freshFixture.detectChanges();
+    expect(freshFixture.componentInstance.answers.controls.every(control => control.value === null)).toBeTrue();
+    expect(localStorage.getItem(ASRS_HISTORY_STORAGE_KEY)).toBeNull();
   });
 
   it('accepts every response including zero, retains revisions, and tracks displayed progress', () => {
@@ -180,8 +200,58 @@ describe('AsrsComponent local assessment flow', () => {
     expect(result.querySelector('ngx-gauge svg')).not.toBeNull();
     expect(result.querySelector('.asrs-gauge-marker')?.getAttribute('fill')).toBe(severity.gaugeColor);
     expect(getItem).not.toHaveBeenCalledWith('asrs_session_id');
-    expect(setItem).not.toHaveBeenCalled();
+    expect(setItem).toHaveBeenCalledOnceWith(ASRS_HISTORY_STORAGE_KEY, jasmine.any(String));
     expect(removeItem).not.toHaveBeenCalled();
+  });
+
+  it('saves submitted answers before reset, keeps the result, and appends on a later completion', () => {
+    const fixture = TestBed.createComponent(AsrsComponent);
+    fixture.detectChanges();
+    const component = fixture.componentInstance;
+    const firstAnswers = [0, 1, 2, 3, 4, 3, 2, 1, 0, 4, 1, 3, 2, 4, 0, 1, 2, 3];
+    component.answers.controls.forEach((control, index) => control.setValue(firstAnswers[index]));
+
+    component.submit();
+    fixture.detectChanges();
+    const first = (JSON.parse(localStorage.getItem(ASRS_HISTORY_STORAGE_KEY)!) as AsrsHistoryV1).records[0];
+    expect(first.answers).toEqual(firstAnswers);
+    expect(first.totalScore).toBe(firstAnswers.reduce((sum, answer) => sum + answer, 0));
+    expect(component.answers.controls.every(control => control.value === null)).toBeTrue();
+    expect(component.savedRecord).toEqual(first);
+    expect(component.historySaveError).toBeNull();
+    expect((fixture.nativeElement.querySelector('.result-card') as HTMLElement).textContent)
+      .toContain(first.result.severityText);
+    component.submit();
+    fixture.detectChanges();
+    expect((JSON.parse(localStorage.getItem(ASRS_HISTORY_STORAGE_KEY)!) as AsrsHistoryV1).records.length).toBe(1);
+
+    component.restart();
+    component.answers.controls.forEach(control => control.setValue(4));
+    component.submit();
+    const records = (JSON.parse(localStorage.getItem(ASRS_HISTORY_STORAGE_KEY)!) as AsrsHistoryV1).records;
+    expect(records.length).toBe(2);
+    expect(records[0]).toEqual(first);
+    expect(records[1].id).not.toBe(first.id);
+    expect(records[1].answers).toEqual(Array(18).fill(4));
+  });
+
+  it('keeps a computed result usable while exposing a failed save', () => {
+    const fixture = TestBed.createComponent(AsrsComponent);
+    fixture.detectChanges();
+    const component = fixture.componentInstance;
+    component.answers.controls.forEach(control => control.setValue(0));
+    const storageError = new Error('write failed');
+    spyOn(localStorage, 'setItem').and.throwError(storageError.message);
+
+    component.submit();
+    fixture.detectChanges();
+
+    expect(component.showResult).toBeTrue();
+    expect(component.totalScore).toBe(0);
+    expect(component.savedRecord).toBeNull();
+    expect(component.historySaveError).toEqual(jasmine.any(Error));
+    expect(localStorage.getItem(ASRS_HISTORY_STORAGE_KEY)).toBeNull();
+    expect(fixture.nativeElement.querySelector('.result-card')).not.toBeNull();
   });
 
   it('classifies every valid score at the copied ASRS thresholds', () => {

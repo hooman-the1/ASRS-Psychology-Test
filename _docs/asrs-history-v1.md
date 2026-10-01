@@ -21,5 +21,13 @@ record IDs when creating a subsequent record. `isAsrsHistoryV1` validates parsed
 including field shape, version, unique IDs, timestamps, score/category consistency, and
 result snapshot types. A reader should reject invalid data before using it.
 
-Storage access and recovery behavior belong to issues #58 and #59. An incompatible future
-shape requires a new version rather than interpreting it as v1.
+`loadAsrsHistory` reads only the `asrs:history` localStorage key. If it is absent, it returns
+an empty v1 envelope without writing one. If present, it parses and validates the stored
+envelope, then returns its records in stored order with their original result snapshots.
+`saveCompletedAsrsAssessment` reads that envelope, creates a record from completed answers,
+appends it, and writes the updated envelope. The questionnaire calls it once for a valid
+submission before resetting the form. A read or write failure propagates from the storage
+helper; the result screen remains usable, while `savedRecord` stays null and
+`historySaveError` holds the failure for later recovery UI. User-facing recovery and handling
+of malformed or incompatible data belong to #59. An incompatible future shape requires a
+new version rather than interpreting it as v1.

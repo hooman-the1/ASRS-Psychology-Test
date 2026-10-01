@@ -11,6 +11,8 @@ import {
 } from './asrs.helpers';
 
 import { SeverityCategory, questions } from './asrs.constants';
+import { AsrsHistoryRecordV1 } from './asrs-history';
+import { saveCompletedAsrsAssessment } from './asrs-history-storage';
 
 @Component({
   selector: 'app-asrs',
@@ -24,6 +26,8 @@ export class AsrsComponent implements OnInit {
   totalScore = 0;
   currentStep = 0;
   questions = questions;
+  savedRecord: AsrsHistoryRecordV1 | null = null;
+  historySaveError: unknown = null;
 
   severityText = '';
   recommendationText = '';
@@ -84,9 +88,17 @@ export class AsrsComponent implements OnInit {
   submit(): void {
     if (this.asrsForm.invalid) return;
 
+    const submittedAnswers: number[] = this.answers.value;
     this.calculateScore();
     const category = getSeverityCategory(this.totalScore);
     this.setSeverityDetails(category);
+    this.savedRecord = null;
+    this.historySaveError = null;
+    try {
+      this.savedRecord = saveCompletedAsrsAssessment(submittedAnswers);
+    } catch (error) {
+      this.historySaveError = error;
+    }
     this.finalizeResults();
   }
 
@@ -95,6 +107,8 @@ export class AsrsComponent implements OnInit {
     this.currentStep = 0;
     this.totalScore = 0;
     this.showResult = false;
+    this.savedRecord = null;
+    this.historySaveError = null;
   }
 
   restart(): void {
