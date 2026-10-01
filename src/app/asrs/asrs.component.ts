@@ -130,6 +130,7 @@ export class AsrsComponent implements OnInit {
 
   startHistoryDelete(record: AsrsHistoryRecordV1): void {
     if (this.historyStatus !== 'available') return;
+    this.pendingClearHistory = null;
     this.pendingDeleteRecord = record;
     this.historyDeleteStatus = null;
   }
