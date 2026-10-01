@@ -9,7 +9,7 @@ import { MatRadioModule } from '@angular/material/radio';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 
 import { questions, SEVERITY_LEVELS } from './asrs.constants';
-import { getGaugeMarkers } from './asrs.helpers';
+import { getGaugeMarkers, getSeverityCategory } from './asrs.helpers';
 import { AsrsComponent } from './asrs.component';
 import { AsrsGaugeComponent } from './asrs-gauge.component';
 import { LatinToPersianNumbersPipe } from './latin-to-persian-numbers.pipe';
@@ -182,6 +182,75 @@ describe('AsrsComponent local assessment flow', () => {
     expect(getItem).not.toHaveBeenCalledWith('asrs_session_id');
     expect(setItem).not.toHaveBeenCalled();
     expect(removeItem).not.toHaveBeenCalled();
+  });
+
+  it('classifies every valid score at the copied ASRS thresholds', () => {
+    expect(SEVERITY_LEVELS.minimal.severity).toBe('حداقل نشانه‌های ADHD');
+    expect(SEVERITY_LEVELS.mild.severity).toBe('علائم خفیف');
+    expect(SEVERITY_LEVELS.moderate.severity).toBe('علائم متوسط');
+    expect(SEVERITY_LEVELS.severe.severity).toBe('علائم شدید');
+    for (let score = 0; score <= 72; score++) {
+      const expected = score <= 17 ? 'minimal'
+        : score <= 27 ? 'mild'
+        : score <= 36 ? 'moderate' : 'severe';
+      expect(getSeverityCategory(score)).withContext(`score ${score}`).toBe(expected);
+    }
+  });
+
+  [
+    { answers: Array(18).fill(0), score: 0, category: 'minimal' },
+    { answers: Array(13).fill(0).concat(4, 4, 4, 4, 1), score: 17, category: 'minimal' },
+    { answers: Array(14).fill(1).concat(4, 0, 0, 0), score: 18, category: 'mild' },
+    { answers: Array(9).fill(3).concat(Array(9).fill(0)), score: 27, category: 'mild' },
+    { answers: Array(7).fill(4).concat(Array(11).fill(0)), score: 28, category: 'moderate' },
+    { answers: Array(18).fill(2), score: 36, category: 'moderate' },
+    { answers: Array(17).fill(2).concat(3), score: 37, category: 'severe' },
+    { answers: Array(18).fill(4), score: 72, category: 'severe' },
+  ].forEach(({ answers, score, category }) => {
+    it(`shows the local total ${score} and ${category} severity after submission`, () => {
+      const fixture = TestBed.createComponent(AsrsComponent);
+      fixture.detectChanges();
+      const component = fixture.componentInstance;
+      component.answers.controls.forEach((control, index) => control.setValue(answers[index]));
+
+      component.submit();
+      fixture.detectChanges();
+
+      const result = fixture.nativeElement.querySelector('.result-card') as HTMLElement;
+      expect(component.totalScore).toBe(score);
+      expect(component.severityText).toBe(SEVERITY_LEVELS[category as keyof typeof SEVERITY_LEVELS].severity);
+      expect(result).not.toBeNull();
+      expect(result.textContent).toContain(component.severityText);
+      expect(result.querySelectorAll('mat-card-content p')[0].textContent).toContain('مجموع امتیاز:');
+      expect(result.querySelectorAll('mat-card-content p')[0].textContent)
+        .toContain(new LatinToPersianNumbersPipe().transform(score) as string);
+    });
+  });
+
+  it('includes every answer exactly once when one answer changes by a point', () => {
+    const fixture = TestBed.createComponent(AsrsComponent);
+    fixture.detectChanges();
+    const component = fixture.componentInstance;
+    const mixed = [0, 1, 2, 3, 4, 3, 2, 1, 0, 4, 1, 3, 2, 4, 0, 1, 2, 3];
+    const expected = mixed.reduce((sum, value) => sum + value, 0);
+    component.answers.controls.forEach((control, index) => control.setValue(mixed[index]));
+    component.calculateScore();
+    expect(component.totalScore).toBe(expected);
+
+    component.answers.at(0).setValue(1);
+    component.calculateScore();
+    expect(component.totalScore).toBe(expected + 1);
+    component.answers.at(17).setValue(4);
+    component.calculateScore();
+    expect(component.totalScore).toBe(expected + 2);
+
+    component.answers.controls.forEach(control => control.setValue(0));
+    component.answers.controls.forEach((control, index) => {
+      control.setValue(1);
+      component.calculateScore();
+      expect(component.totalScore).withContext(`answer ${index + 1}`).toBe(1);
+      control.setValue(0);
+    });
   });
 
   it('restarts with a fresh form and leaves the existing session key untouched', () => {
