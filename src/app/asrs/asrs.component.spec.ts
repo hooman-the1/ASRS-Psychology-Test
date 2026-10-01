@@ -44,6 +44,111 @@ describe('AsrsComponent local assessment flow', () => {
     expect(removeItem).not.toHaveBeenCalled();
   });
 
+  it('keeps the first question unanswered and prevents moving before or past the questionnaire', () => {
+    const fixture = TestBed.createComponent(AsrsComponent);
+    fixture.detectChanges();
+    const component = fixture.componentInstance;
+    const buttons = () => fixture.nativeElement.querySelectorAll('.button-group button') as NodeListOf<HTMLButtonElement>;
+
+    expect(questions.length).toBe(18);
+    expect(component.getCurrentControl().value).toBeNull();
+    expect(buttons().length).toBe(2);
+    expect(buttons()[0].disabled).toBeTrue();
+    expect(buttons()[1].disabled).toBeTrue();
+    expect(fixture.nativeElement.querySelector('button[color="primary"]')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('button[color="accent"]')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.result-card')).toBeNull();
+    component.prev();
+    component.next();
+    expect(component.currentStep).toBe(0);
+
+    component.answers.controls.forEach(control => control.setValue(0));
+    for (let step = 0; step < questions.length - 1; step++) component.next();
+    fixture.detectChanges();
+    expect(component.currentStep).toBe(17);
+    expect(buttons().length).toBe(2);
+    expect(fixture.nativeElement.querySelector('button[color="primary"]')).toBeNull();
+    expect(fixture.nativeElement.querySelector('button[color="accent"]')).not.toBeNull();
+    component.next();
+    expect(component.currentStep).toBe(17);
+  });
+
+  it('accepts every response including zero, retains revisions, and tracks displayed progress', () => {
+    const fixture = TestBed.createComponent(AsrsComponent);
+    fixture.detectChanges();
+    const component = fixture.componentInstance;
+    const buttons = () => fixture.nativeElement.querySelectorAll('.button-group button') as NodeListOf<HTMLButtonElement>;
+    const progress = () => Number(fixture.nativeElement.querySelector('mat-progress-bar').getAttribute('aria-valuenow'));
+
+    expect(progress()).toBeCloseTo(100 / 18, 4);
+    for (let choice = 0; choice < 5; choice++) {
+      component.getCurrentControl().setValue(choice);
+      fixture.detectChanges();
+      expect(buttons()[1].disabled).toBeFalse();
+    }
+    component.getCurrentControl().setValue(0);
+    buttons()[1].click();
+    fixture.detectChanges();
+    expect(component.currentStep).toBe(1);
+    expect(progress()).toBeCloseTo(200 / 18, 4);
+    buttons()[0].click();
+    fixture.detectChanges();
+    expect(component.currentStep).toBe(0);
+    expect(component.getCurrentControl().value).toBe(0);
+    expect(progress()).toBeCloseTo(100 / 18, 4);
+    component.getCurrentControl().setValue(4);
+    buttons()[1].click();
+    fixture.detectChanges();
+    buttons()[0].click();
+    fixture.detectChanges();
+    expect(component.getCurrentControl().value).toBe(4);
+
+    for (let step = 0; step < 9; step++) {
+      component.getCurrentControl().setValue(0);
+      component.next();
+    }
+    fixture.detectChanges();
+    expect(component.currentStep).toBe(9);
+    expect(progress()).toBeCloseTo(1000 / 18, 4);
+    component.prev();
+    fixture.detectChanges();
+    expect(progress()).toBeCloseTo(900 / 18, 4);
+  });
+
+  it('shows Submit only on the last question and blocks incomplete forms even through submit()', () => {
+    const fixture = TestBed.createComponent(AsrsComponent);
+    fixture.detectChanges();
+    const component = fixture.componentInstance;
+    const buttons = () => fixture.nativeElement.querySelectorAll('.button-group button') as NodeListOf<HTMLButtonElement>;
+
+    component.answers.controls.slice(0, 17).forEach(control => control.setValue(0));
+    for (let step = 0; step < 17; step++) component.next();
+    fixture.detectChanges();
+    expect(component.currentStep).toBe(17);
+    expect(Number(fixture.nativeElement.querySelector('mat-progress-bar').getAttribute('aria-valuenow'))).toBe(100);
+    expect(buttons().length).toBe(2);
+    expect(fixture.nativeElement.querySelector('button[color="primary"]')).toBeNull();
+    expect(fixture.nativeElement.querySelector('button[color="accent"]')).not.toBeNull();
+    expect(buttons()[1].disabled).toBeTrue();
+    component.submit();
+    expect(component.showResult).toBeFalse();
+
+    component.getCurrentControl().setValue(0);
+    component.answers.at(5).reset();
+    fixture.detectChanges();
+    expect(buttons()[1].disabled).toBeFalse();
+    component.submit();
+    fixture.detectChanges();
+    expect(component.showResult).toBeFalse();
+    expect(fixture.nativeElement.querySelector('.result-card')).toBeNull();
+
+    component.answers.at(5).setValue(0);
+    buttons()[1].click();
+    fixture.detectChanges();
+    expect(component.showResult).toBeTrue();
+    expect(fixture.nativeElement.querySelectorAll('.result-card').length).toBe(1);
+  });
+
   it('keeps an incomplete response unsubmitted and displays a locally calculated complete result', () => {
     const getItem = spyOn(localStorage, 'getItem').and.callThrough();
     const setItem = spyOn(localStorage, 'setItem').and.callThrough();

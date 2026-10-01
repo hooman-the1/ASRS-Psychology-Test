@@ -53,12 +53,12 @@ export class AsrsComponent implements OnInit {
   }
 
   next(): void {
-    if (this.getCurrentControl().invalid) return;
+    if (this.currentStep >= this.questions.length - 1 || this.getCurrentControl().invalid) return;
     this.currentStep++;
   }
 
   prev(): void {
-    this.currentStep--;
+    if (this.currentStep > 0) this.currentStep--;
   }
 
   calculateScore(): void {
