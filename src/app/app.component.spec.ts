@@ -61,7 +61,7 @@ describe('AppComponent', () => {
     const labels = ['هرگز', 'به ندرت', 'گاهی اوقات', 'اغلب', 'تقریباً همیشه'];
 
     expect(questions.length).toBe(18);
-    expect(main.querySelector('.intro-text')?.textContent).toContain('6 ماه گذشته');
+    expect(main.querySelector('.intro-text')?.textContent).toContain('۶ ماه گذشته');
     expect((main.querySelector('.intro-text') as HTMLElement).innerText).toContain('گذشته،');
 
     for (let step = 0; step < questions.length; step++) {
