@@ -20,6 +20,27 @@
       <p *ngIf="historyStatus === 'available' && historyRecords.length === 0" class="history-empty" role="status">
         هنوز ارزیابی ذخیره‌شده‌ای در تاریخچه ندارید.
       </p>
+      <p *ngIf="historyDeleteStatus === 'deleted'" class="history-delete-success" role="status">
+        ارزیابی انتخاب‌شده از تاریخچه حذف شد.
+      </p>
+      <p *ngIf="historyDeleteStatus === 'not-found'" class="history-delete-not-found" role="status">
+        این ارزیابی دیگر در تاریخچه موجود نیست. فهرست به‌روز شد.
+      </p>
+      <p *ngIf="historyDeleteStatus === 'failed'" class="history-delete-failed" role="alert">
+        حذف ارزیابی انجام نشد. لطفاً دوباره تلاش کنید.
+      </p>
+      <p *ngIf="historyDeleteStatus === 'unavailable'" class="history-delete-failed" role="alert">
+        حذف انجام نشد، چون تاریخچه در دسترس نیست.
+      </p>
+      <div *ngIf="pendingDeleteRecord as record" class="history-delete-confirmation" role="group" aria-label="تأیید حذف ارزیابی">
+        <p>آیا می‌خواهید این ارزیابی ذخیره‌شده را حذف کنید؟</p>
+        <p><strong>زمان ثبت:</strong> <time [attr.datetime]="record.submittedAt">{{ formatHistoryDate(record.submittedAt) }}</time></p>
+        <p><strong>نتیجه:</strong> {{ record.result.severityText }}، <strong>امتیاز:</strong> {{ record.totalScore | latinToPersianNumbers }}</p>
+        <div class="history-delete-actions">
+          <button mat-stroked-button type="button" class="cancel-history-delete-button" (click)="cancelHistoryDelete()">انصراف</button>
+          <button mat-stroked-button type="button" class="confirm-history-delete-button" (click)="confirmHistoryDelete()">تأیید حذف این ارزیابی</button>
+        </div>
+      </div>
       <ol *ngIf="historyStatus === 'available' && historyRecords.length > 0" class="history-list">
         <li *ngFor="let record of historyRecords" class="history-item" [attr.data-record-id]="record.id">
           <time [attr.datetime]="record.submittedAt">{{ formatHistoryDate(record.submittedAt) }}</time>
@@ -27,6 +48,9 @@
           <span>نتیجه: {{ record.result.severityText }}</span>
           <button mat-stroked-button type="button" (click)="openHistoryRecord(record.id)">
             مشاهده جزئیات
+          </button>
+          <button mat-stroked-button type="button" class="delete-history-button" (click)="startHistoryDelete(record)">
+            حذف این ارزیابی
           </button>
         </li>
       </ol>

@@ -1,5 +1,5 @@
 import { ASRS_HISTORY_STORAGE_KEY, AsrsHistoryV1, isAsrsHistoryV1 } from './asrs-history';
-import { loadAsrsHistory, saveCompletedAsrsAssessment } from './asrs-history-storage';
+import { deleteAsrsHistoryRecord, loadAsrsHistory, saveCompletedAsrsAssessment } from './asrs-history-storage';
 
 describe('ASRS browser history storage', () => {
   beforeEach(() => localStorage.removeItem(ASRS_HISTORY_STORAGE_KEY));
@@ -122,5 +122,55 @@ describe('ASRS browser history storage', () => {
         .toThrowError('ASRS history unavailable');
       expect(localStorage.getItem(ASRS_HISTORY_STORAGE_KEY)).withContext(`invalid case ${index}`).toBe(raw);
     }
+  });
+
+  it('deletes only the matching ID while preserving duplicate-looking records and stored order', () => {
+    const first = saveCompletedAsrsAssessment(Array(18).fill(1));
+    const second = saveCompletedAsrsAssessment(Array(18).fill(1));
+    const third = saveCompletedAsrsAssessment(Array(18).fill(1));
+    const before = loadAsrsHistory();
+    expect(before.status).toBe('available');
+
+    expect(deleteAsrsHistoryRecord(second.id)).toBe('deleted');
+    expect(loadAsrsHistory()).toEqual({ status: 'available', history: {
+      version: 1, records: [first, third],
+    } });
+  });
+
+  it('does not write when the selected ID disappeared before confirmation', () => {
+    const record = saveCompletedAsrsAssessment(Array(18).fill(2));
+    const raw = '{"version":1,"records":[]}';
+    localStorage.setItem(ASRS_HISTORY_STORAGE_KEY, raw);
+    const setItem = spyOn(localStorage, 'setItem').and.callThrough();
+    expect(deleteAsrsHistoryRecord(record.id)).toBe('not-found');
+    expect(setItem).not.toHaveBeenCalled();
+    expect(localStorage.getItem(ASRS_HISTORY_STORAGE_KEY)).toBe(raw);
+  });
+
+  it('refuses invalid history without changing its raw value', () => {
+    const record = saveCompletedAsrsAssessment(Array(18).fill(2));
+    const setItem = spyOn(localStorage, 'setItem').and.callThrough();
+    for (const raw of ['{bad', '{"version":2,"records":[]}', '{"version":1,"records":[{}]}']) {
+      localStorage.setItem(ASRS_HISTORY_STORAGE_KEY, raw);
+      setItem.calls.reset();
+      expect(deleteAsrsHistoryRecord(record.id)).toBe('unavailable');
+      expect(setItem).not.toHaveBeenCalled();
+      expect(localStorage.getItem(ASRS_HISTORY_STORAGE_KEY)).toBe(raw);
+    }
+  });
+
+  it('surfaces a write failure while retaining the old records', () => {
+    const record = saveCompletedAsrsAssessment(Array(18).fill(2));
+    const raw = localStorage.getItem(ASRS_HISTORY_STORAGE_KEY);
+    spyOn(localStorage, 'setItem').and.throwError('write failed');
+    expect(() => deleteAsrsHistoryRecord(record.id)).toThrowError('write failed');
+    expect(localStorage.getItem(ASRS_HISTORY_STORAGE_KEY)).toBe(raw);
+  });
+
+  it('does not write when storage cannot be read', () => {
+    const setItem = spyOn(localStorage, 'setItem').and.callThrough();
+    spyOn(localStorage, 'getItem').and.throwError('read failed');
+    expect(deleteAsrsHistoryRecord('saved')).toBe('unavailable');
+    expect(setItem).not.toHaveBeenCalled();
   });
 });

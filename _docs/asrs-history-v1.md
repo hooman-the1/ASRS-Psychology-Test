@@ -36,3 +36,9 @@ computed result when saving fails. Its visible notice states that the assessment
 saved; the saved record remains null. A later submission can save when storage recovers or
 the key is restored to a valid v1 envelope. An incompatible future shape requires a new
 version rather than interpreting it as v1.
+
+`deleteAsrsHistoryRecord` re-reads and validates the entire v1 envelope when the user confirms
+deletion. It removes only the selected record ID, preserves the remaining records and their
+storage order, and reports a missing ID without writing. Unavailable history is left untouched;
+a failed write is reported to the view. The history list requires a second confirmation step
+showing the selected date, result, and score before calling this operation.

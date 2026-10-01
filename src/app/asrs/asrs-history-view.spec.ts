@@ -365,4 +365,154 @@ describe('ASRS saved history view', () => {
     expect(fixture.nativeElement.querySelectorAll('.history-item').length).toBe(0);
     expect(localStorage.getItem(ASRS_HISTORY_STORAGE_KEY)).toBeNull();
   });
+
+  it('confirms the chosen duplicate-looking row by displayed details and deletes only its ID', () => {
+    const first = record('first', '2026-04-03T09:00:00.000Z', 2, 'نتیجه یکسان');
+    const second = record('second', '2026-04-03T09:00:00.000Z', 2, 'نتیجه یکسان');
+    const third = record('third', '2026-01-01T09:00:00.000Z', 1, 'نتیجه دیگر');
+    const raw = JSON.stringify({ version: 1, records: [third, first, second] });
+    localStorage.setItem(ASRS_HISTORY_STORAGE_KEY, raw);
+    const fixture = TestBed.createComponent(AsrsComponent);
+    fixture.detectChanges();
+    const component = fixture.componentInstance;
+    component.answers.at(0).setValue(4);
+    component.next();
+    component.answers.at(1).setValue(3);
+    const root = fixture.nativeElement as HTMLElement;
+    (root.querySelector('.open-history-button') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    (root.querySelector('[data-record-id="second"] .delete-history-button') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    const confirmation = root.querySelector('.history-delete-confirmation') as HTMLElement;
+    expect(confirmation.textContent).toContain('نتیجه یکسان');
+    expect(confirmation.textContent).toContain('۳۶');
+    expect(confirmation.querySelector('time')?.getAttribute('datetime')).toBe(second.submittedAt);
+    expect(localStorage.getItem(ASRS_HISTORY_STORAGE_KEY)).toBe(raw);
+    (root.querySelector('.cancel-history-delete-button') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(root.querySelector('.history-delete-confirmation')).toBeNull();
+    expect(localStorage.getItem(ASRS_HISTORY_STORAGE_KEY)).toBe(raw);
+    (root.querySelector('[data-record-id="second"] .delete-history-button') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    (root.querySelector('.confirm-history-delete-button') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(Array.from(root.querySelectorAll('.history-item')).map(item => (item as HTMLElement).dataset['recordId']))
+      .toEqual(['first', 'third']);
+    expect(JSON.parse(localStorage.getItem(ASRS_HISTORY_STORAGE_KEY)!).records).toEqual([third, first]);
+    expect(component.currentStep).toBe(1);
+    expect(component.answers.at(0).value).toBe(4);
+    expect(component.answers.at(1).value).toBe(3);
+    fixture.destroy();
+    const refreshed = TestBed.createComponent(AsrsComponent);
+    refreshed.detectChanges();
+    (refreshed.nativeElement.querySelector('.open-history-button') as HTMLButtonElement).click();
+    refreshed.detectChanges();
+    expect(Array.from(refreshed.nativeElement.querySelectorAll('.history-item'))
+      .map(item => (item as HTMLElement).dataset['recordId'])).toEqual(['first', 'third']);
+  });
+
+  it('reports a disappeared record and refreshes the list without overwriting storage', () => {
+    const saved = record('saved', '2026-04-03T09:00:00.000Z', 1, 'نتیجه');
+    localStorage.setItem(ASRS_HISTORY_STORAGE_KEY, JSON.stringify({ version: 1, records: [saved] }));
+    const fixture = TestBed.createComponent(AsrsComponent);
+    fixture.detectChanges();
+    const root = fixture.nativeElement as HTMLElement;
+    (root.querySelector('.open-history-button') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    (root.querySelector('.delete-history-button') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    const raw = '{"version":1,"records":[]}';
+    localStorage.setItem(ASRS_HISTORY_STORAGE_KEY, raw);
+    (root.querySelector('.confirm-history-delete-button') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(root.querySelector('.history-delete-not-found')).not.toBeNull();
+    expect(root.querySelector('.history-empty')).not.toBeNull();
+    expect(localStorage.getItem(ASRS_HISTORY_STORAGE_KEY)).toBe(raw);
+  });
+
+  it('disables deletion on malformed history and reports a write failure on valid history', () => {
+    const saved = record('saved', '2026-04-03T09:00:00.000Z', 1, 'نتیجه');
+    localStorage.setItem(ASRS_HISTORY_STORAGE_KEY, JSON.stringify({ version: 1, records: [saved] }));
+    const fixture = TestBed.createComponent(AsrsComponent);
+    fixture.detectChanges();
+    const root = fixture.nativeElement as HTMLElement;
+    (root.querySelector('.open-history-button') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    (root.querySelector('.delete-history-button') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    const raw = '{"version":2,"records":[]}';
+    localStorage.setItem(ASRS_HISTORY_STORAGE_KEY, raw);
+    (root.querySelector('.confirm-history-delete-button') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(root.querySelector('.history-unavailable')).not.toBeNull();
+    expect(root.querySelector('.delete-history-button')).toBeNull();
+    expect(localStorage.getItem(ASRS_HISTORY_STORAGE_KEY)).toBe(raw);
+    localStorage.setItem(ASRS_HISTORY_STORAGE_KEY, JSON.stringify({ version: 1, records: [saved] }));
+    fixture.componentInstance.openHistory();
+    fixture.detectChanges();
+    const validRaw = localStorage.getItem(ASRS_HISTORY_STORAGE_KEY);
+    (root.querySelector('.delete-history-button') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    spyOn(localStorage, 'setItem').and.throwError('write failed');
+    (root.querySelector('.confirm-history-delete-button') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(root.querySelector('.history-delete-failed')).not.toBeNull();
+    expect(root.querySelectorAll('.history-item').length).toBe(1);
+    expect(localStorage.getItem(ASRS_HISTORY_STORAGE_KEY)).toBe(validRaw);
+
+  });
+
+  it('shows empty history after deleting its only record and permits a later save', () => {
+    const saved = record('saved', '2026-04-03T09:00:00.000Z', 1, 'نتیجه');
+    localStorage.setItem(ASRS_HISTORY_STORAGE_KEY, JSON.stringify({ version: 1, records: [saved] }));
+    const fixture = TestBed.createComponent(AsrsComponent);
+    fixture.detectChanges();
+    const root = fixture.nativeElement as HTMLElement;
+    (root.querySelector('.open-history-button') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    (root.querySelector('.delete-history-button') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    (root.querySelector('.confirm-history-delete-button') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(root.querySelector('.history-empty')).not.toBeNull();
+    (root.querySelector('.back-from-history-button') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    fixture.componentInstance.answers.controls.forEach(control => control.setValue(4));
+    fixture.componentInstance.submit();
+    fixture.componentInstance.openHistory();
+    fixture.detectChanges();
+    expect(root.querySelectorAll('.history-item').length).toBe(1);
+  });
+
+  it('preserves an unsaved current result through confirmation, cancel, and deletion', () => {
+    const saved = record('saved', '2026-04-03T09:00:00.000Z', 1, 'نتیجه');
+    localStorage.setItem(ASRS_HISTORY_STORAGE_KEY, JSON.stringify({ version: 1, records: [saved] }));
+    const fixture = TestBed.createComponent(AsrsComponent);
+    fixture.detectChanges();
+    const component = fixture.componentInstance;
+    component.answers.controls.forEach(control => control.setValue(4));
+    spyOn(localStorage, 'setItem').and.throwError('write failed');
+    component.submit();
+    fixture.detectChanges();
+    expect(component.savedRecord).toBeNull();
+    const root = fixture.nativeElement as HTMLElement;
+    (root.querySelector('.open-history-button') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    (root.querySelector('.delete-history-button') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    (root.querySelector('.cancel-history-delete-button') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    (root.querySelector('.delete-history-button') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    // A later write can succeed after the failed submission.
+    (localStorage.setItem as jasmine.Spy).and.callThrough();
+    (root.querySelector('.confirm-history-delete-button') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    (root.querySelector('.back-from-history-button') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(component.showResult).toBeTrue();
+    expect(component.totalScore).toBe(72);
+    expect(component.savedRecord).toBeNull();
+    expect(root.querySelector('.history-unsaved-notice')).not.toBeNull();
+  });
 });

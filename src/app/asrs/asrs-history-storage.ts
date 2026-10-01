@@ -36,3 +36,16 @@ export function saveCompletedAsrsAssessment(answers: readonly number[]): AsrsHis
   } satisfies AsrsHistoryV1));
   return record;
 }
+
+/** Re-read and validate immediately before removing exactly one stored ID. */
+export function deleteAsrsHistoryRecord(id: string): 'deleted' | 'not-found' | 'unavailable' {
+  const loaded = loadAsrsHistory();
+  if (loaded.status === 'unavailable') return 'unavailable';
+  if (!loaded.history.records.some(record => record.id === id)) return 'not-found';
+
+  localStorage.setItem(ASRS_HISTORY_STORAGE_KEY, JSON.stringify({
+    version: 1,
+    records: loaded.history.records.filter(record => record.id !== id),
+  } satisfies AsrsHistoryV1));
+  return 'deleted';
+}

@@ -12,7 +12,7 @@ import {
 
 import { SeverityCategory, questions } from './asrs.constants';
 import { ASRS_HISTORY_STORAGE_KEY, AsrsHistoryRecordV1 } from './asrs-history';
-import { loadAsrsHistory, saveCompletedAsrsAssessment } from './asrs-history-storage';
+import { deleteAsrsHistoryRecord, loadAsrsHistory, saveCompletedAsrsAssessment } from './asrs-history-storage';
 
 @Component({
   selector: 'app-asrs',
@@ -34,6 +34,8 @@ export class AsrsComponent implements OnInit {
   selectedHistoryId: string | null = null;
   selectedHistoryRecord: AsrsHistoryRecordV1 | null = null;
   detailStatus: 'available' | 'not-found' | 'unavailable' = 'not-found';
+  pendingDeleteRecord: AsrsHistoryRecordV1 | null = null;
+  historyDeleteStatus: 'deleted' | 'not-found' | 'unavailable' | 'failed' | null = null;
   readonly answerLabels = ['هرگز', 'به ندرت', 'گاهی اوقات', 'اغلب', 'تقریباً همیشه'];
   private readonly historyDateFormatter = new Intl.DateTimeFormat('fa-IR', {
     dateStyle: 'medium', timeStyle: 'short',
@@ -69,6 +71,8 @@ export class AsrsComponent implements OnInit {
   openHistory(): void {
     this.selectedHistoryId = null;
     this.selectedHistoryRecord = null;
+    this.pendingDeleteRecord = null;
+    this.historyDeleteStatus = null;
     const loaded = loadAsrsHistory();
     this.historyStatus = loaded.status;
     this.historyRecords = loaded.status === 'available'
@@ -83,6 +87,32 @@ export class AsrsComponent implements OnInit {
     this.showHistory = false;
     this.selectedHistoryId = null;
     this.selectedHistoryRecord = null;
+    this.pendingDeleteRecord = null;
+    this.historyDeleteStatus = null;
+  }
+
+  startHistoryDelete(record: AsrsHistoryRecordV1): void {
+    if (this.historyStatus !== 'available') return;
+    this.pendingDeleteRecord = record;
+    this.historyDeleteStatus = null;
+  }
+
+  cancelHistoryDelete(): void {
+    this.pendingDeleteRecord = null;
+  }
+
+  confirmHistoryDelete(): void {
+    const id = this.pendingDeleteRecord?.id;
+    if (id === undefined) return;
+    this.pendingDeleteRecord = null;
+    let status: typeof this.historyDeleteStatus;
+    try {
+      status = deleteAsrsHistoryRecord(id);
+    } catch {
+      status = 'failed';
+    }
+    this.openHistory();
+    this.historyDeleteStatus = status;
   }
 
   openHistoryRecord(id: string): void {
